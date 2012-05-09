@@ -1,0 +1,13 @@
+# msp430-gcc -nostartfiles -mmcu=msp430x2013 -O2 -g -mendup-at=main test1.c
+
+msp430-gcc -nostartfiles -mmcu=msp430x2013 -O2 -g -Wa,-ahlms=x.lst \
+-mendup-at=main -o x.a43 x.c -L -Xlinker -T ldscript
+
+msp430-objcopy -O ihex x.a43 x.hex
+
+
+msp430-objdump -dSt x.a43 >x.xout
+
+
+
+
