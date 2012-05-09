@@ -61,15 +61,6 @@
 #define TMR0_RB_  0x6008
 #define TMR0_RC_  0x600A
 
-#define ADC0_CR_  0xA000
-#define ADC0_DR_  0xA001
-#define ADC1_CR_  0xA002
-#define ADC1_DR_  0xA003
-#define ADC2_CR_  0xA004
-#define ADC2_DR_  0xA005
-#define ADC3_CR_  0xA006
-#define ADC3_DR_  0xA007
-
 sfrw(PADSR,PADSR_);
 sfrw(PADIR,PADIR_);
 sfrw(PAOUT,PAOUT_);
@@ -91,16 +82,6 @@ sfrw(TMR0_CNT,TMR0_CNT_);
 sfrw(TMR0_RA,TMR0_RA_);
 sfrw(TMR0_RB,TMR0_RB_);
 sfrw(TMR0_RC,TMR0_RC_);
-
-sfrw(ADC0_CR,ADC0_CR_);
-sfrw(ADC0_DR,ADC0_DR_);
-sfrw(ADC1_CR,ADC1_CR_);
-sfrw(ADC1_DR,ADC1_DR_);
-sfrw(ADC2_CR,ADC2_CR_);
-sfrw(ADC2_DR,ADC2_DR_);
-sfrw(ADC3_CR,ADC3_CR_);
-sfrw(ADC3_DR,ADC3_DR_);
-
 
 // must end in a space !!!!
 // The order is important .... don't insert anything!
@@ -398,31 +379,6 @@ uint8_t inputBufPtr;
 int16_t fecShadow[3];
 
 
-const uint16_t biasVoltage[16] = {
-
-  // DAC0
-
-  1618,  //  0 Bias Adj 1.58
-  2918,  //  1 Vfix 2.85
-  2509,  //  2 feedback voltage 2.3, now 2.7
-  1434,  //  3 external threshold 1.35, now 1.4
-  2048,  //  4 Diode Bias 0 2
-  2048,  //  5 Diode Bias 1 2
-  2048,  //  6 Diode Bias 2 2
-  2048,  //  7 Diode Bias 3 2
-
-  // DAC1
-
-   563,  //  8 ADC Bias N      0.55
-   870,  //  9 ADC Bias N Casc 0.85
-  2232,  // 10 ADC Bias P Casc 2.18
-  2560,  // 11 ADC Bias P      2.50
-   563,  // 12 Bias N          0.55
-   870,  // 13 Bias N          0.85
-  2232,  // 14 Bias P          2.18
-  2560   // 15 Bias P          2.50
-};
-
 
 NAKED(_reset_vector__){
   __asm__ __volatile__("br #main"::);
@@ -441,39 +397,6 @@ interrupt (0) junkInterrupt(void){
 
 interrupt(2) adcInterrupt(void){
   // read all 4 a/d converter ports
-
-  ad_int_tmp = ADC0_CR;    // get value and status
-  if(ad_int_tmp & 1){
-    ad_int_tmp &= 0xFFFE;
-    ADC0_CR = ad_int_tmp;  // clear bit
-    buckets[256]++;  // inc total count
-    ad_int_tmp = ad_int_tmp >> 8;  // get high byte
-    buckets[ad_int_tmp]++;
-  }
-  ad_int_tmp = ADC1_CR;    // get value and status
-  if(ad_int_tmp & 1){
-    ad_int_tmp &= 0xFFFE;
-    ADC1_CR = ad_int_tmp;  // clear bit
-    buckets[257]++;  // inc total count
-    ad_int_tmp = ad_int_tmp >> 8;  // get high byte
-    buckets[ad_int_tmp]++;
-  } 
-  ad_int_tmp = ADC2_CR;    // get value and status
-  if(ad_int_tmp & 1){
-    ad_int_tmp &= 0xFFFE;
-    ADC2_CR = ad_int_tmp;  // clear bit
-    buckets[258]++;  // inc total count
-    ad_int_tmp = ad_int_tmp >> 8;  // get high byte
-    buckets[ad_int_tmp]++;
-  }
-  ad_int_tmp = ADC3_CR;    // get value and status
-  if(ad_int_tmp & 1){
-    ad_int_tmp &= 0xFFFE;
-    ADC3_CR = ad_int_tmp;  // clear bit
-    buckets[259]++;  // inc total count
-    ad_int_tmp = ad_int_tmp >> 8;  // get high byte
-    buckets[ad_int_tmp]++;
-  }
 }
 
 
@@ -593,134 +516,6 @@ uint8_t getKey(){
 } 
 
 
-
-void sendToFEC(uint16_t *v){  // xxxxx  need to add to forth interp
-  uint8_t i;
-
-  while((SPI_SR & 0x0002)==0);
-  SPI_SCR = 0x00B0;	// note clock polarity is different than in dac
-  PAOUT |= 0x0003;      // select FEC
-
-  for(i=0;i<3;i++){
-    SPI_TDR = v[i];
-    while((SPI_SR & 0x0002)==0);
-  }
-
-  PAOUT &= 0xFFFC;	// clear select lines.
-
-}
-
-
-void sendToDAC(uint8_t c,uint16_t v){  // xxxxx need to add to forth interp
-
-  uint16_t x;
-
-  // send specified 16 bit value to DAC x
-
-
-  while((SPI_SR & 0x0002)==0);
-
-  // setup SPI for dacs
-  
-  SPI_SCR = 0x0090;
-  
-  if(!c){
-    // dac 0
-    PAOUT &= 0xFFFC;
-    PAOUT |= 0x0001;
-  } else {
-    PAOUT &= 0xFFFC;
-    PAOUT |= 0x0002;
-  }
-  SPI_TDR = v;
-  
-  while((SPI_SR & 0x0002) == 0);   // wait for spi to be not busy.
-
-}
-
-
-void setDAC(uint8_t c,uint16_t v){
-  // c is the channel to write to 
-  // v is the value.
-  uint8_t i;
-  uint16_t k;
-  
-  if(c & 0x08){
-    i = 1;
-  } else {
-    i = 0;
-  }
-
-  k = c & 0x0007;  // channel number
-  k = (k << 12) | v;
-
-  sendToDAC(i,k);
-
-}
-
-
-void setupDACs(){
-
-  sendToDAC(0,0x803C); // 2x gain, bufered reference
-  sendToDAC(1,0x803C);
-  sendToDAC(0,0xC000);
-  sendToDAC(1,0xC000);
-
-}
-
-
-void setAllDACs(){
-  uint8_t i;
-  for(i=0;i<16;i++){
-    setDAC(i,biasVoltage[i]);
-  }
-}
-
-
-/* void setupTest(){
-  uint16_t x;
-
-  while((SPI_SR & 0x0002) == 0);
-  
-  
-  delay(1000);  
-  
-  
-  if(inputBuf[1] == '0'){
-    // dac 0
-    PAOUT &= 0xFFFD;
-    PAOUT |= 0x0002;
-//  } else {
-//    PAOUT &= 0xFFFE;
-//    PAOUT |= 0x0001;
-  }
-  SPI_TDR = 0x803C;
-  
-//  while((SPI_SR & 0x0002) == 0);   // wait for spi to be not busy.
-//  x = 0xFFFF;
-//   // wait for spi to be not busy.
-//  while((SPI_SR & 0x0002) == 0 && x != 0){
-//    x--;
-//  }  
-
-  delay(1000);
-
-  
-}*/
-
-
-void setupADC(){
-  uint16_t v[3];
-  v[0] = 0x0A19;
-  v[1] = 0x0041;
-  v[2] = 0x05F0;
-  sendToFEC(v);
-  v[0] = 0xA19F;
-  v[1] = 0x045C;
-  v[2] = 0x1FF0;
-  sendToFEC(v);
-  
-}
 
 
 void initVars(){
@@ -1222,7 +1017,7 @@ void execN(int16_t n){
     case 17: // allot
       prog[progPtr++] = popMathStack();
       if(progPtr >= PROG_SPACE){
-        printString("prog mem");
+        printString((uint8_t *)"prog mem");
       }
       break;
 
@@ -1386,7 +1181,7 @@ void execN(int16_t n){
     case 48: // a!
       i = popMathStack();  // address
       j = popMathStack();  // value
-      setDAC(i,j);
+      /*setDAC(i,j);*/
       break;
 
     case 49: // and
@@ -1470,7 +1265,7 @@ void execN(int16_t n){
       fecShadow[0] = popMathStack();   // lsb
       fecShadow[1] = popMathStack();
       fecShadow[2] = popMathStack();   //msb
-      sendToFEC(fecShadow);
+      /*sendToFEC(fecShadow);*/
       break;
 
     case 62: // fecbset
@@ -1481,7 +1276,7 @@ void execN(int16_t n){
         i = 1 << i;   // get the bit location
         fecShadow[j] |= i;
       }
-      sendToFEC(fecShadow);
+      /*sendToFEC(fecShadow);*/
       break;
 
     case 63: // fecbclr
@@ -1492,7 +1287,6 @@ void execN(int16_t n){
         i = 1 << i;   // get the bit location
         fecShadow[j] &= ~i;
       }
-      sendToFEC(fecShadow);
       break;
 
     default:
@@ -1554,26 +1348,9 @@ int main(void){
 
   dirMemory = (void *) 0;   // its an array starting at zero
 
-  setupDACs();    //
-  setAllDACs();   // start off at default values
-
   processLoop();
 
-
-/*  while(1){
-
-    eint();
-
-    // test ADC
-    if(ADC3_CR & 1){
-      // we hit something
-      ADC3_CR = 0;   // clear the flag
- //     dumy3++;
-    }
-
- //   dumy0++;   
-
-  } */
+  return 0;
 }
 
 NAKED(_unexpected_){

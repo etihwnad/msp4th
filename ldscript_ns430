@@ -3,13 +3,12 @@ OUTPUT_FORMAT("elf32-msp430","elf32-msp430","elf32-msp430")
 OUTPUT_ARCH(msp:20)
 MEMORY
 {
-  text   (rx)   	: ORIGIN = 0x3000,    LENGTH = 0x1000
-  data   (rwx)  	: ORIGIN = 0x4000, 	  LENGTH = 0x3FDF
-  vectors (rw)  	: ORIGIN = 0xFFDE,	 LENGTH = 32
-  bootloader(rx)	: ORIGIN = 0x0800,	      LENGTH = 2048
-  infomem(rx)		: ORIGIN = 0x0000,	  LENGTH = 256
-  infomemnobits(rx)	: ORIGIN = 0x0100,        LENGTH = 256
-  calibration (rwx)	: ORIGIN = 0x7FE0,	LENGTH = 32
+  text   (rx)   	: ORIGIN = 0x4000, LENGTH = 0x3FDF
+  data   (rwx)  	: ORIGIN = 0x4000, LENGTH = 0x3FDF
+  vectors (rw)  	: ORIGIN = 0xFFDE, LENGTH = 32
+  bootloader(rx)	: ORIGIN = 0x0800, LENGTH = 2048
+  infomem(rx)		: ORIGIN = 0x0000, LENGTH = 256
+  infomemnobits(rx)	: ORIGIN = 0x0100, LENGTH = 256
 }
 SECTIONS
 {
@@ -163,12 +162,6 @@ SECTIONS
     *(.vectors*)
      _vectors_end = . ;
   }  > vectors
-
-  .calibration :
-  {
-     PROVIDE (__calibration_start = .) ;
-     *(.calibration*)
-  } > calibration	
 
   /* Stabs for profiling information*/
   .profiler 0 : { *(.profiler) }
