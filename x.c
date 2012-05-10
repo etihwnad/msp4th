@@ -11,6 +11,8 @@
 #include <io.h>
 #include <iomacros.h>
 
+#include "ns430-atoi.h"
+#include "ns430-uart.h"
 
 #define DEBUG_STUFF 1		// just print lots of junk
 #define CMD_LIST_SIZE 128
@@ -21,67 +23,6 @@
 
 #define BI_PROG_SHIFT 10000
 
-// expected I/O stuff
-//   Port B 0x0001 in
-//   Port B 0x0002 in
-//   Port B 0x0004 in
-//   Port B 0x0008 in
-//   Port B 0x0010 out serial output
-//   Port B 0x0020 in  serial input
-//   Port B 0x0040 out main loop toggle
-//   Port B 0x0080 out interrupt toggle
-//   Port B 0x0100
-//   Port B 0x0200
-//   Port B 0x0400
-//   Port B 0x0800
-//   Port B 0x1000
-//   Port B 0x2000
-//   Port B 0x4000
-//   Port B 0x8000
-
-#define PADSR_ 0x2000       
-#define PADIR_ 0x2004      // OEN
-#define PAOUT_ 0x2008      // was ODR
-#define PAPER_ 0x200C 
-
-#define PBDSR_ 0x2002
-#define PBDIR_ 0x2006
-#define PBOUT_ 0x200A
-#define PBIER_ 0x200E
-
-#define SPI_SCR_ 0x4000
-#define SPI_RDR_ 0x4002
-#define SPI_TDR_ 0x4004
-#define SPI_SR_  0x4006
-
-#define TMR0_TCR_ 0x6000
-#define TMR0_SR_  0x6002
-#define TMR0_CNT_ 0x6004
-#define TMR0_RA_  0x6006
-#define TMR0_RB_  0x6008
-#define TMR0_RC_  0x600A
-
-sfrw(PADSR,PADSR_);
-sfrw(PADIR,PADIR_);
-sfrw(PAOUT,PAOUT_);
-sfrw(PAPER,PAPER_);	// interrupt enable register
-
-sfrw(PBDSR,PBDSR_);
-sfrw(PBDIR,PBDIR_);
-sfrw(PBOUT,PBOUT_);
-sfrw(PBIER,PBIER_);	// interrupt enable register
-
-sfrw(SPI_SCR,SPI_SCR_);
-sfrw(SPI_RDR,SPI_RDR_);
-sfrw(SPI_TDR,SPI_TDR_);
-sfrw(SPI_SR ,SPI_SR_ );
-
-sfrw(TMR0_TCR,TMR0_TCR_);
-sfrw(TMR0_SR,TMR0_SR_);
-sfrw(TMR0_CNT,TMR0_CNT_);
-sfrw(TMR0_RA,TMR0_RA_);
-sfrw(TMR0_RB,TMR0_RB_);
-sfrw(TMR0_RC,TMR0_RC_);
 
 // must end in a space !!!!
 // The order is important .... don't insert anything!
@@ -1325,14 +1266,14 @@ int main(void){
 
   PAPER = 0x000C;
   PAOUT = 0x0000;
-  PADIR = 0x001F;  // set data direction registers
+  PAOEN = 0x001F;  // set data direction registers
 
   initVars();
 
   TMR0_CNT = 0x0000;
   TMR0_SR = 0;
   TMR0_RC = 1059;
-  TMR0_TCR = 0x003C;
+  TMR0_CR = 0x003C;
 
   emit(0x00);   
 
