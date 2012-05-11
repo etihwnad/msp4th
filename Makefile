@@ -3,8 +3,13 @@
 
 .SECONDARY:
 
+MAIN=x.c
+
+default: $(MAIN:.c=.hex) $(MAIN:.c=.xout)
+
+#msp430-gcc -nostartfiles -mmcu=msp430x2013 -O2 -g -Wall -Wa,-ahlms=$(<:.c=.lst)
 %.a43: %.c
-	msp430-gcc -nostartfiles -mmcu=msp430x2013 -O2 -g -Wall -Wa,-ahlms=$(<:.c=.lst) \
+	msp430-gcc -nostartfiles -mmcu=msp430x2013 -Wall -Wa,-ahlms=$(<:.c=.lst) \
 	    -mendup-at=main -o $@ $< -L -Xlinker -T ldscript_ns430
 
 %.hex: %.a43

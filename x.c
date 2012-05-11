@@ -341,6 +341,9 @@ interrupt(2) adcInterrupt(void){
 }
 
 
+
+
+
 interrupt (4) timerInterrupt(void){
 
   // if the PBDSR is read in the next instruction after TMR0_SR
@@ -434,6 +437,7 @@ static void __inline__ delay(register unsigned int n){
 }
 
 void emit(uint8_t c){
+    /*
   uint8_t i;
   i = outputRingPtrXin;
   i = (i+1) & 0x0F;
@@ -442,17 +446,32 @@ void emit(uint8_t c){
   }
   outputRing[outputRingPtrXin] = c;
   outputRingPtrXin = i;
+  */
+
+  int16_t i;
+  while ((UART0_SR & TDRE) == 0) {
+      // wait for register to clear
+      i++;
+  }
+  UART0_TDR = c;
 }
 
 
 uint8_t getKey(){
   uint8_t i;
 
+  /*
   while(inputRingPtrXin == inputRingPtrXout){  // hang until we get a char
     eint();
   }
   i = inputRing[inputRingPtrXout++];
   inputRingPtrXout &= 0x0F;
+  */
+
+  while ((UART0_SR & RDRF) == 0) {
+      // wait for char
+  }
+  i = UART0_RDR & 0x00ff;
   return(i);
 } 
 
@@ -461,6 +480,7 @@ uint8_t getKey(){
 
 void initVars(){
 
+    uint16_t i;
   // I override the C startup code .... so I must init all vars.
 
   outputCharCntrN = 0;
@@ -476,6 +496,14 @@ void initVars(){
 
   inputBufPtr = 0;
 
+  lineBufferPtr = 0;
+  for (i=0; i < 128; i++) {
+      lineBuffer[i] = 0;
+  }
+
+  for (i=0; i < 32; i++) {
+      wordBuffer[i] = 0;
+  }
 
   
 }
@@ -697,6 +725,8 @@ void luFunc(){
 
 void numFunc(){  // the word to test is in wordBuffer
   int16_t i,j,n;
+  printString("in numFunc()\r\n");
+  printString(wordBuffer);
   // first check for neg sign
   i = 0;
   if(wordBuffer[0] == '-'){
@@ -734,6 +764,9 @@ void numFunc(){  // the word to test is in wordBuffer
     n = 0;
     j = 0;
   }
+  /*printNumber(n);*/
+  /*printNumber(j);*/
+  /*printString("\r\n");*/
   pushMathStack(n);
   pushMathStack(j);
 }
@@ -867,6 +900,9 @@ void execFunc(){
 void execN(int16_t n){
   int16_t i,j,k,m;
   int32_t x,y,z;
+  printString("execN: ");
+  printNumber(n);
+  printString("\r\n");
   switch(n){
     case 1:
   //    xit = 1;
@@ -952,6 +988,7 @@ void execN(int16_t n){
     case 16: // keyt
       // return a 1 if keys are in ring buffer
      i = (inputRingPtrXin - inputRingPtrXout) & 0x0F;    // logical result assigned to i
+     i = 0;
      pushMathStack(i);
      break;
 
@@ -1020,6 +1057,7 @@ void execN(int16_t n){
 
 
     case 30:  // num
+      printString("in case 30\r\n");
       numFunc();
       break;
 
@@ -1242,6 +1280,7 @@ void processLoop(){            // this processes the forth opcodes.
 
   while(1){
 
+      printString("processLoop()\r\n");
     if(progCounter > 9999){
       opcode = progBi[progCounter - 10000];
     } else {
@@ -1264,16 +1303,21 @@ void processLoop(){            // this processes the forth opcodes.
 int main(void){
   int16_t i;
 
-  PAPER = 0x000C;
+  PAPER = 0x0030;
   PAOUT = 0x0000;
-  PAOEN = 0x001F;  // set data direction registers
+  PAOEN = 0x0010;  // set data direction registers
 
   initVars();
 
-  TMR0_CNT = 0x0000;
-  TMR0_SR = 0;
-  TMR0_RC = 1059;
-  TMR0_CR = 0x003C;
+  /*TMR0_CNT = 0x0000;*/
+  /*TMR0_SR = 0;*/
+  /*TMR0_RC = 1059;*/
+  /*TMR0_CR = 0x003C;*/
+
+  /* 8e6 / (16*19200) - 1 = 25.0416 */
+  /* 8e6 / (16*2400) - 1 = 207.33 */
+  UART0_BCR = 207;
+  UART0_CR = UARTEn;
 
   emit(0x00);   
 
@@ -1289,6 +1333,8 @@ int main(void){
 
   dirMemory = (void *) 0;   // its an array starting at zero
 
+  getLine();
+
   processLoop();
 
   return 0;
@@ -1302,21 +1348,21 @@ NAKED(_unexpected_){
 
 INTERRUPT_VECTORS = { 
 
-   (void *)0x3C00,     // RST          just jump to next
-   (void *)0x4030,     // NMI          restart at main
+   main,     // RST          just jump to next
+   main,     // NMI          restart at main
    main,               // External IRQ
-   (void *)0x3C00,     // SPI IRQ
-   (void *)0x3C00,     // PIO IRQ
-   (void *)0x4030,     // Timer IRQ
-   timerInterrupt,     // UART IRQ
-   (void *)0x4030,      // ADC IRQ
-   adcInterrupt  ,      // UMB IRQ
-   (void *)0x3C00,
-   (void *)0x3C00,
-   (void *)0x3C00,
-   (void *)0x3C00,
-   (void *)0x3C00,
-   (void *)0x4030,
-   junkInterrupt
+   main,     // SPI IRQ
+   main,     // PIO IRQ
+   main,     // Timer IRQ
+   main,     // UART IRQ
+   main,      // ADC IRQ
+   main,      // UMB IRQ
+   main,
+   main,
+   main,
+   main,
+   main,
+   main,
+   main
  };
 
