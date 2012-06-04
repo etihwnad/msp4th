@@ -725,7 +725,7 @@ void luFunc(){
 
 void numFunc(){  // the word to test is in wordBuffer
   int16_t i,j,n;
-  printString("in numFunc()\r\n");
+  printString((const uint8_t *)"in numFunc()\r\n");
   printString(wordBuffer);
   // first check for neg sign
   i = 0;
@@ -900,9 +900,9 @@ void execFunc(){
 void execN(int16_t n){
   int16_t i,j,k,m;
   int32_t x,y,z;
-  printString("execN: ");
+  printString((const uint8_t *)"execN: ");
   printNumber(n);
-  printString("\r\n");
+  printString((const uint8_t *)"\r\n");
   switch(n){
     case 1:
   //    xit = 1;
@@ -1057,7 +1057,7 @@ void execN(int16_t n){
 
 
     case 30:  // num
-      printString("in case 30\r\n");
+      printString((const uint8_t *)"in case 30\r\n");
       numFunc();
       break;
 
@@ -1280,7 +1280,7 @@ void processLoop(){            // this processes the forth opcodes.
 
   while(1){
 
-      printString("processLoop()\r\n");
+      printString((const uint8_t *)"processLoop()\r\n");
     if(progCounter > 9999){
       opcode = progBi[progCounter - 10000];
     } else {
