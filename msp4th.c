@@ -3,6 +3,10 @@
 #include "ns430-uart.h"
 #include "msp4th.h"
 
+
+/* 
+ * Configuration constants
+ */
 #define CMD_LIST_SIZE 128
 #define MATH_STACK_SIZE 16
 #define ADDR_STACK_SIZE 32
@@ -11,7 +15,34 @@
 
 #define BI_PROG_SHIFT 10000
 
+/*
+ * Local function prototypes
+ */
+uint8_t getKeyB(void);
+void getLine(void);
+void getWord(void);
+void listFunction(void);
+int16_t popMathStack(void);
+void pushMathStack(int16_t n);
+int16_t popAddrStack(void);
+void pushAddrStack(int16_t n);
+int16_t lookupToken(uint8_t *x,uint8_t *l);
+void luFunc(void);
+void numFunc(void);
+void ifFunc(uint8_t x);
+void pushnFunc(void);
+void overFunc(void);
+void dfnFunc(void);
+void printNumber(int16_t n);
+void printHexChar(int16_t n);
+void printHexByte(int16_t n);
+void printHexWord(int16_t n);
+void execN(int16_t n);
+void execFunc(void);
 
+/*
+ * Module-level global vars
+ */
 // must end in a space !!!!
 // The order is important .... don't insert anything!
 // the order matches the execN function
@@ -58,9 +89,7 @@ int16_t subSecondClock;
 int16_t fastTimer;
 int16_t slowTimer;
 
-
 int16_t *dirMemory;
-
 
 uint16_t buckets[260];  // use buckets[256] for total
 
@@ -270,31 +299,6 @@ uint16_t lineBufferPtr;                 /* input line buffer pointer */
 // uint8_t xit;                    /* set to 1 to kill program */
 
 uint8_t wordBuffer[32];		// just get a word
-
-
-void init_msp4th(void) {
-//  xit = 0;
-  addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
-  progCounter = 10000;
-  progPtr = 1;			// this will be the first opcode
-  i=0;
-  cmdListPtr = 0;
-  cmdList[0] = 0;
-  progOpsPtr = 1;      // just skip location zero .... it makes it easy for us
-
-  dirMemory = (void *) 0;   // its an array starting at zero
-
-  lineBufferPtr = 0;
-  for (i=0; i < 128; i++) {
-      lineBuffer[i] = 0;
-  }
-
-  for (i=0; i < 32; i++) {
-      wordBuffer[i] = 0;
-  }
-
-  getLine();
-}
 
 
 uint8_t getKeyB(){
@@ -631,8 +635,6 @@ void printHexWord(int16_t n){
   printHexByte(n >> 8);
   printHexByte(n);
 }
-
-void execN(int16_t n); // proto ... this could get recursive
 
 void execFunc(){
   int16_t opcode;
@@ -1035,12 +1037,36 @@ void execN(int16_t n){
   }
 }
 
+
+void init_msp4th(void) {
+//  xit = 0;
+  addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
+  progCounter = 10000;
+  progPtr = 1;			// this will be the first opcode
+  i=0;
+  cmdListPtr = 0;
+  cmdList[0] = 0;
+  progOpsPtr = 1;      // just skip location zero .... it makes it easy for us
+
+  dirMemory = (void *) 0;   // its an array starting at zero
+
+  lineBufferPtr = 0;
+  for (i=0; i < 128; i++) {
+      lineBuffer[i] = 0;
+  }
+
+  for (i=0; i < 32; i++) {
+      wordBuffer[i] = 0;
+  }
+
+  getLine();
+}
+
+
 void processLoop(){            // this processes the forth opcodes.
   int16_t opcode;
 
-
   while(1){
-
       printString((const uint8_t *)"processLoop()\r\n");
     if(progCounter > 9999){
       opcode = progBi[progCounter - 10000];

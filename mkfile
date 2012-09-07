@@ -8,12 +8,12 @@
 # $(TARGET).elf $(TARGET).hex and $(TARGET).txt nad $(TARGET).map are all generated.
 # The TXT file is used for BSL loading, the ELF can be used for JTAG use
 # 
-TARGET     = msp4th
+TARGET     = main
 #MCU        = msp430f5529
 MCU        = msp2
 # List all the source files here
 # eg if you have a source file foo.c then list it here
-SOURCES = x.c
+SOURCES = main.c ns430-uart.c
 # Include are located in the Include directory
 #INCLUDES = -IInclude
 INCLUDES = -I.
