@@ -5,7 +5,7 @@
 # 'make clean' deletes everything except source files and Makefile
 # You need to set TARGET, MCU and SOURCES for your project.
 # TARGET is the name of the executable file to be produced 
-# $(TARGET).elf $(TARGET).hex and $(TARGET).txt nad $(TARGET).map are all generated.
+# $(TARGET).elf $(TARGET).hex and $(TARGET).txt and $(TARGET).map are all generated.
 # The TXT file is used for BSL loading, the ELF can be used for JTAG use
 # 
 TARGET     = main
@@ -13,7 +13,7 @@ TARGET     = main
 MCU        = msp2
 # List all the source files here
 # eg if you have a source file foo.c then list it here
-SOURCES = main.c ns430-uart.c
+SOURCES = main.c ns430-uart.c msp4th.c
 # Include are located in the Include directory
 #INCLUDES = -IInclude
 INCLUDES = -I.
@@ -77,6 +77,6 @@ endif
 .PHONY:       clean
 clean:
 	-$(RM) $(OBJECTS)
-	-$(RM) $(TARGET).*
+	-$(RM) $(TARGET).{,elf,hex,txt,map}
 	-$(RM) $(SOURCES:.c=.lst)
 	-$(RM) $(DEPEND)

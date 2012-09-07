@@ -1,4 +1,7 @@
 
+#include <signal.h>
+#include <stdio.h>
+
 #include "ns430-atoi.h"
 #include "ns430-uart.h"
 #include "msp4th.h"
@@ -47,7 +50,7 @@ void execFunc(void);
 // The order is important .... don't insert anything!
 // the order matches the execN function
 
-const uint8_t cmdListBi[] = 
+const char cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
               "> = .hb gw dfn "                     // 11 -> 15
@@ -65,7 +68,7 @@ const uint8_t cmdListBi[] =
 
 // these commands are interps
 
-const uint8_t cmdListBi2[] = {"[ : var "};
+const char cmdListBi2[] = {"[ : var "};
 
 // these values point to where in progBi[] these routines start
 
@@ -82,7 +85,7 @@ int16_t prog[PROG_SPACE];  // user programs are placed here
 int16_t progPtr;           // next open space for user opcodes
 int16_t progOps[USR_OPCODE_SIZE];
 int16_t progOpsPtr;
-uint8_t cmdList[CMD_LIST_SIZE];  // just a string of user defined names
+char cmdList[CMD_LIST_SIZE];  // just a string of user defined names
 int16_t cmdListPtr;
 
 int16_t subSecondClock;
@@ -313,22 +316,22 @@ void getLine(){
   int16_t i;
   lineBufferPtr = 0;
 
-  emit(0x0D);
-  emit(0x0A);
-  emit('>');   // this is our prompt
+  putchar(0x0D);
+  putchar(0x0A);
+  putchar('>');   // this is our prompt
 
   i = 1;
   while(i){  // just hang in loop until we get CR
-    i = getKey();
+    i = getchar();
     if(i == 0x08){
       if(lineBufferPtr > 0){
-        emit(0x08);
-        emit(' ');
-        emit(0x08);
+        putchar(0x08);
+        putchar(' ');
+        putchar(0x08);
         lineBufferPtr--;
       }
     } else {
-      emit(i);
+      putchar(i);
       if(i == 0x0D){
         // hit cr
         lineBuffer[lineBufferPtr] = 0;
@@ -344,7 +347,7 @@ void getLine(){
       }
     }
   }
-  emit(0x0A);
+  putchar(0x0A);
   lineBufferPtr = 0;
 }
 
@@ -379,9 +382,9 @@ void getWord(){
 }
 
 void inline listFunction(){
-  printString(cmdListBi);
-  printString(cmdListBi2);
-  printString(cmdList);
+  puts(cmdListBi);
+  puts(cmdListBi2);
+  puts(cmdList);
 }
   
 int16_t popMathStack(){
@@ -490,8 +493,8 @@ void luFunc(){
 
 void numFunc(){  // the word to test is in wordBuffer
   int16_t i,j,n;
-  printString((const uint8_t *)"in numFunc()\r\n");
-  printString(wordBuffer);
+  puts((const uint8_t *)"in numFunc()\r\n");
+  puts(wordBuffer);
   // first check for neg sign
   i = 0;
   if(wordBuffer[0] == '-'){
@@ -531,7 +534,7 @@ void numFunc(){  // the word to test is in wordBuffer
   }
   /*printNumber(n);*/
   /*printNumber(j);*/
-  /*printString("\r\n");*/
+  /*puts("\r\n");*/
   pushMathStack(n);
   pushMathStack(j);
 }
@@ -608,12 +611,12 @@ void printNumber(int16_t n){
   i--;
   
   if(n < 0){
-    emit('-');
+    putchar('-');
   }
   do{
-    emit(x[i--]);
+    putchar(x[i--]);
   }while(i >= 0);
-  emit(' ');
+  putchar(' ');
 }
 
 void printHexChar(int16_t n){
@@ -622,7 +625,7 @@ void printHexChar(int16_t n){
     n += 7;
   }
   n += '0';
-  emit(n);
+  putchar(n);
 }
 
 void printHexByte(int16_t n){
@@ -663,9 +666,9 @@ void execFunc(){
 void execN(int16_t n){
   int16_t i,j,k,m;
   int32_t x,y,z;
-  printString((const uint8_t *)"execN: ");
+  puts((const uint8_t *)"execN: ");
   printNumber(n);
-  printString((const uint8_t *)"\r\n");
+  puts((const uint8_t *)"\r\n");
   switch(n){
     case 1:
   //    xit = 1;
@@ -758,7 +761,7 @@ void execN(int16_t n){
     case 17: // allot
       prog[progPtr++] = popMathStack();
       if(progPtr >= PROG_SPACE){
-        printString((uint8_t *)"prog mem");
+        puts((uint8_t *)"prog mem");
       }
       break;
 
@@ -820,7 +823,7 @@ void execN(int16_t n){
 
 
     case 30:  // num
-      printString((const uint8_t *)"in case 30\r\n");
+      puts((const uint8_t *)"in case 30\r\n");
       numFunc();
       break;
 
@@ -853,11 +856,11 @@ void execN(int16_t n){
       break;
 
     case 38: // pwrd
-      printString(wordBuffer);
+      puts(wordBuffer);
       break;
 
     case 39: // emit
-      emit(popMathStack());
+      putchar(popMathStack());
       break;
 
     case 40: // ;
@@ -945,12 +948,12 @@ void execN(int16_t n){
       break;
       
     case 52: // key     get a key from input .... (wait for it)
-      pushMathStack(getKey());
+      pushMathStack(getchar());
       break;
 
     case 53: // cr
-      emit(0x0D);
-      emit(0x0A);
+      putchar(0x0D);
+      putchar(0x0A);
       break;
 
     case 54: // hist
@@ -979,7 +982,7 @@ void execN(int16_t n){
     case 58: // hstat
       for(i=256;i<260;i++){
         printHexWord(buckets[i]);
-        emit(' ');
+        putchar(' ');
       }
       break;
 
@@ -987,19 +990,19 @@ void execN(int16_t n){
       for(i=0;i<256;i++){
         if(buckets[i]){
           printHexByte(i);
-          emit(' ');
+          putchar(' ');
           printHexWord(buckets[i]);
-          emit(0x0D);
-          emit(0x0A);
+          putchar(0x0D);
+          putchar(0x0A);
         }
       }
       break;
 
     case 60: // fec
       printHexWord(fecShadow[2]);
-      emit(' ');
+      putchar(' ');
       printHexWord(fecShadow[1]);
-      emit(' ');
+      putchar(' ');
       printHexWord(fecShadow[0]);
       break;      
 
@@ -1032,7 +1035,7 @@ void execN(int16_t n){
       break;
 
     default:
-      printString((uint8_t *)"opcode ");      
+      puts((uint8_t *)"opcode ");      
       break;
   }
 }
@@ -1067,7 +1070,7 @@ void processLoop(){            // this processes the forth opcodes.
   int16_t opcode;
 
   while(1){
-      printString((const uint8_t *)"processLoop()\r\n");
+      puts((const uint8_t *)"processLoop()\r\n");
     if(progCounter > 9999){
       opcode = progBi[progCounter - 10000];
     } else {
@@ -1090,5 +1093,4 @@ void processLoop(){            // this processes the forth opcodes.
 
 
 
-#endif
 
