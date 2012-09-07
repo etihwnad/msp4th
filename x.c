@@ -7,14 +7,13 @@
 // last update 3/9/08
 
 #include <signal.h>
-
-#include <io.h>
+/*#include <io.h>*/
 #include <iomacros.h>
 
 #include "ns430-atoi.h"
 #include "ns430-uart.h"
 
-#define DEBUG_STUFF 1		// just print lots of junk
+#define DEBUG_STUFF 1           // just print lots of junk
 #define CMD_LIST_SIZE 128
 #define MATH_STACK_SIZE 16
 #define ADDR_STACK_SIZE 32
@@ -28,7 +27,8 @@
 // The order is important .... don't insert anything!
 // the order matches the execN function
 
-const uint8_t cmdListBi[] = 
+/*const uint8_t cmdListBi[] = */
+const char cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
               "> = .hb gw dfn "                     // 11 -> 15
@@ -46,13 +46,14 @@ const uint8_t cmdListBi[] =
 
 // these commands are interps
 
-const uint8_t cmdListBi2[] = {"[ : var "};
+/*const uint8_t cmdListBi2[] = {"[ : var "};*/
+const char cmdListBi2[] = {"[ : var "};
 
 // these values point to where in progBi[] these routines start
 
 const int16_t cmdList2N[] = {0,10000,10032,10135};  // need an extra zero at the front
 
-#define LAST_PREDEFINED 40	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 40      // update this when we add commands to the built in list
 
 int16_t mathStack[MATH_STACK_SIZE];
 
@@ -281,7 +282,7 @@ uint8_t lineBuffer[128];      /* input line buffer */
 uint16_t lineBufferPtr;                 /* input line buffer pointer */
 // uint8_t xit;                    /* set to 1 to kill program */
 
-uint8_t wordBuffer[32];		// just get a word
+uint8_t wordBuffer[32];         // just get a word
 
 
 
@@ -431,8 +432,8 @@ interrupt (4) timerInterrupt(void){
 static void __inline__ delay(register unsigned int n){
   __asm__ __volatile__ (
       "1: \n"
-      " dec	%[n] \n"
-      " jne	1b \n"
+      " dec     %[n] \n"
+      " jne     1b \n"
       : [n] "+r"(n));
 }
 
@@ -449,7 +450,8 @@ void emit(uint8_t c){
   */
 
   int16_t i;
-  while ((UART0_SR & TDRE) == 0) {
+  /*while ((UART0_SR & TDRE) == 0) {*/
+  while ((UART0_SR & (TDRE | TXEMPTY)) == 0) {
       // wait for register to clear
       i++;
   }
@@ -472,6 +474,7 @@ uint8_t getKey(){
       // wait for char
   }
   i = UART0_RDR & 0x00ff;
+  delay(100);
   return(i);
 } 
 
@@ -480,7 +483,7 @@ uint8_t getKey(){
 
 void initVars(){
 
-    uint16_t i;
+  uint16_t i;
   // I override the C startup code .... so I must init all vars.
 
   outputCharCntrN = 0;
@@ -510,92 +513,119 @@ void initVars(){
 
 
 uint8_t getKeyB(){
-  uint8_t i;
-  i = lineBuffer[lineBufferPtr];
-  if(i != 0) lineBufferPtr++;
-  return(i);
+  uint8_t c;
+  c = lineBuffer[lineBufferPtr];
+  lineBufferPtr = lineBufferPtr + 1;
+  /*if(c != 0) lineBufferPtr++;*/
+  return(c);
 }
 
 
-void printHexByte(int16_t n);
+/*void printHexByte(uint8_t n);*/
 
 
 
 
 
 void getLine(){
-  int16_t i;
+  uint8_t c;
+  int16_t flag;
   lineBufferPtr = 0;
 
-  emit(0x0D);
-  emit(0x0A);
+  emit('\r');
+  emit('\n');
   emit('>');   // this is our prompt
 
-  i = 1;
-  while(i){  // just hang in loop until we get CR
-    i = getKey();
-    if(i == 0x08){
+  flag = 1;
+  while(flag){  // just hang in loop until we get CR
+    c = getKey();
+    emit(c);
+    printHexByte(c);
+    if(c == '\b'){
       if(lineBufferPtr > 0){
-        emit(0x08);
         emit(' ');
-        emit(0x08);
+        c = 0;
+        emit('\b');
         lineBufferPtr--;
       }
-    } else {
-      emit(i);
-      if(i == 0x0D){
+    } else if (c == '\r'){
+      /*emit(c);*/
+      /*if((c=='\n') || (c=='\r')){*/
+      /*if(c == '\r'){*/
         // hit cr
         lineBuffer[lineBufferPtr] = 0;
-        i = 0;
-      } else {
-
-        lineBuffer[lineBufferPtr++] = i;
+        emit('\n');
+        flag = 0;
+    } else if (c >= ' '){
+        lineBuffer[lineBufferPtr++] = c;
         lineBuffer[lineBufferPtr] = 0;
 
         if(lineBufferPtr > 125){  // prevent overflow of line buffer
-          i=0;
+          flag = 0;
         }
-      }
+      } else {
+          // non-printable char, do nothing
     }
   }
-  emit(0x0A);
   lineBufferPtr = 0;
+  emit('.');
 }
 
 
 void getWord(){
-  int16_t k;
-  uint8_t c;
+  uint8_t k;
+  volatile uint8_t c=1;
   wordBuffer[0] = 0;
   while(wordBuffer[0] == 0){
     k = 0;
-    c = getKeyB();
-    while(( c <= ' ') && ( c != 0 )) c = getKeyB();    /* strip leading spaces */
-    if( c > 0 ){
-      if( c == '"' ){
+    /*
+    while (c != 0){
         c = getKeyB();
-        while((c != '"')&&(c != 0)){
-          if(c != '"') wordBuffer[k++] = c;
-          c = getKeyB();
-        }
-      } else {
-        while(c > ' ' && c != 0){
-          wordBuffer[k++] = c;
-          c = getKeyB();
-        }
-      }
-      wordBuffer[k] = 0;
-    } else {
+        emit(c);
+    }
+    */
+    /* strip leading whitespace */
+    while((c <= ' ') && (c != 0)){
+        c = getKeyB();
+        printHexByte(c);
+        emit(c);
+    }
+
+    /* end of buffer, get more text */
+    emit(c);
+    if(c == 0){
       wordBuffer[0] = 0;
       getLine();     
+    } else {
+      if( c == '"' ){
+        c = getKeyB();
+        emit(c);
+        while((c != '"') && (c != 0)){
+          if(c != '"'){
+              wordBuffer[k++] = c;
+          }
+          c = getKeyB();
+          emit(c);
+        }
+      } else {
+        while((c > ' ') && (c != 0)){
+          wordBuffer[k++] = c;
+          c = getKeyB();
+          emit(c);
+        }
+      }
     }
   }
+  wordBuffer[k] = 0;
 }
 
-void printString(const uint8_t *c){
-  while(c[0]){
-    emit(c[0]);
-    c++;
+void printString(char *c){
+  uint16_t i;
+  emit('.');
+  i = 0;
+  while(c[i] != 0){
+    emit(c[i]);
+    i = i + 1;
   }
 }
 
@@ -725,7 +755,7 @@ void luFunc(){
 
 void numFunc(){  // the word to test is in wordBuffer
   int16_t i,j,n;
-  printString((const uint8_t *)"in numFunc()\r\n");
+  printString("in numFunc()\r\n");
   printString(wordBuffer);
   // first check for neg sign
   i = 0;
@@ -851,24 +881,24 @@ void printNumber(int16_t n){
   emit(' ');
 }
 
-void printHexChar(int16_t n){
+void printHexChar(uint8_t n){
   n &= 0x0F;
   if(n > 9){
     n += 7;
   }
   n += '0';
-  emit(n);
+  emit((uint8_t)n);
 }
 
-void printHexByte(int16_t n){
+void printHexByte(uint8_t n){
   n &= 0xFF;
   printHexChar(n >> 4);
   printHexChar(n);
 }
 
-void printHexWord(int16_t n){
-  printHexByte(n >> 8);
-  printHexByte(n);
+void printHexWord(uint16_t n){
+  printHexByte((uint8_t)(n >> 8));
+  printHexByte((uint8_t)(n & 0xFF));
 }
 
 void execN(int16_t n); // proto ... this could get recursive
@@ -900,9 +930,9 @@ void execFunc(){
 void execN(int16_t n){
   int16_t i,j,k,m;
   int32_t x,y,z;
-  printString((const uint8_t *)"execN: ");
+  printString("execN: ");
   printNumber(n);
-  printString((const uint8_t *)"\r\n");
+  printString("\r\n");
   switch(n){
     case 1:
   //    xit = 1;
@@ -1057,7 +1087,7 @@ void execN(int16_t n){
 
 
     case 30:  // num
-      printString((const uint8_t *)"in case 30\r\n");
+      printString("in case 30\r\n");
       numFunc();
       break;
 
@@ -1134,7 +1164,7 @@ void execN(int16_t n){
       j = popAddrStack();  // loop address
       k = popAddrStack();  // count
       m = popAddrStack();  // limit
-      k++;		   // up the count
+      k++;                 // up the count
       if(k >= m){
         // we are done
       } else {
@@ -1280,7 +1310,7 @@ void processLoop(){            // this processes the forth opcodes.
 
   while(1){
 
-      printString((const uint8_t *)"processLoop()\r\n");
+      printString("processLoop()\r\n");
     if(progCounter > 9999){
       opcode = progBi[progCounter - 10000];
     } else {
@@ -1316,16 +1346,33 @@ int main(void){
 
   /* 8e6 / (16*19200) - 1 = 25.0416 */
   /* 8e6 / (16*2400) - 1 = 207.33 */
-  UART0_BCR = 207;
+  /* 25e6 / (16*2400) - 1 = 207.33 */
+  UART0_BCR = 324;
   UART0_CR = UARTEn;
 
-  emit(0x00);   
+  dint();
+  emit('!');   
 
+  while (1) {
+      uint8_t c;
+      c = getKey();
+      if (c == '`') break;
+      emit(c);
+  }
+
+  emit('t');
+  emit('e');
+  emit('s');
+  emit('t');
+  emit('i');
+  emit('n');
+  emit('g');
+  printString("This is a test of the UART serial printing\r\nit really does work ...\r\n");
 
 //  xit = 0;
   addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
   progCounter = 10000;
-  progPtr = 1;			// this will be the first opcode
+  progPtr = 1;                  // this will be the first opcode
   i=0;
   cmdListPtr = 0;
   cmdList[0] = 0;
