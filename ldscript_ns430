@@ -118,6 +118,8 @@ SECTIONS
     . = ALIGN(2);
      _edata = . ;
   }  > data
+   PROVIDE (__data_load_start = LOADADDR(.data) );
+   PROVIDE (__data_size = SIZEOF(.data) );
   /* Bootloader.  */
   .bootloader   :
   {
@@ -148,6 +150,7 @@ SECTIONS
      PROVIDE (__bss_end = .) ;
      _end = . ;
   }  > data
+   PROVIDE (__bss_size = SIZEOF(.bss) );
   .noinit  SIZEOF(.bss) + ADDR(.bss) :
   {
      PROVIDE (__noinit_start = .) ;

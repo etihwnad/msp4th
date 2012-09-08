@@ -8,6 +8,8 @@
 # $(TARGET).elf $(TARGET).hex and $(TARGET).txt and $(TARGET).map are all generated.
 # The TXT file is used for BSL loading, the ELF can be used for JTAG use
 # 
+SHELL = /bin/bash
+
 TARGET     = main
 #MCU        = msp430f5529
 MCU        = msp2
@@ -20,8 +22,9 @@ INCLUDES = -I.
 # Add or subtract whatever MSPGCC flags you want. There are plenty more
 #######################################################################################
 CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
-ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
-LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map
+#ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
+ASFLAGS  = -mmcu=$(MCU) -Os -Wall -Wunused
+LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map -T ldscript_ns430
 ########################################################################################
 CC       = msp430-gcc
 LD       = msp430-ld
@@ -41,42 +44,58 @@ MV       = mv
 ########################################################################################
 # the file which will include dependencies
 DEPEND = $(SOURCES:.c=.d)
+
 # all the object files
 OBJECTS = $(SOURCES:.c=.o)
-all: $(TARGET).elf $(TARGET).hex $(TARGET).txt 
+
+# all asm files
+ASSEMBLYS = $(SOURCES:.c=.lst)
+
+#all: $(TARGET).elf $(TARGET).hex $(TARGET).txt 
+all: $(TARGET).elf $(TARGET).hex $(ASSEMBLYS)
+
 $(TARGET).elf: $(OBJECTS)
-	echo "Linking $@"
+	@echo "Linking $@"
 	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
-	echo
-	echo ">>>> Size of Firmware <<<<"
+	@echo
+	@echo ">>>> Size of Firmware <<<<"
 	$(SIZE) $(TARGET).elf
-	echo
+	@echo
+
 %.hex: %.elf
 	$(OBJCOPY) -O ihex $< $@
+
 %.txt: %.hex
 	$(MAKETXT) -O $@ -TITXT $< -I
 	unix2dos $(TARGET).txt
 #  The above line is required for the DOS based TI BSL tool to be able to read the txt file generated from linux/unix systems.
+#
 %.o: %.c
-	echo "Compiling $<"
+	@echo "Compiling $<"
 	$(CC) -c $(CFLAGS) -o $@ $<
+
 # rule for making assembler source listing, to see the code
 %.lst: %.c
-	$(CC) -c $(ASFLAGS) -Wa,-anlhd $< > $@
+	@#$(CC) -S $(ASFLAGS) -Wa,-anlhd -o $@ $<
+	$(CC) -S $(ASFLAGS) -o $@ $<
+
 # include the dependencies unless we're going to clean, then forget about them.
 ifneq ($(MAKECMDGOALS), clean)
 -include $(DEPEND)
 endif
+
 # dependencies file
 # includes also considered, since some of these are our own
 # (otherwise use -MM instead of -M)
 %.d: %.c
-	echo "Generating dependencies $@ from $<"
+	@echo "Generating dependencies $@ from $<"
 	$(CC) -M ${CFLAGS} $< >$@
-.SILENT:
+
+#.SILENT:
 .PHONY:       clean
 clean:
-	-$(RM) $(OBJECTS)
-	-$(RM) $(TARGET).{,elf,hex,txt,map}
-	-$(RM) $(SOURCES:.c=.lst)
-	-$(RM) $(DEPEND)
+	$(RM) $(OBJECTS)
+	$(RM) $(TARGET).{elf,hex,txt,map}
+	$(RM) $(SOURCES:.c=.lst)
+	$(RM) $(DEPEND)
+

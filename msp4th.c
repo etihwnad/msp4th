@@ -29,7 +29,7 @@ int16_t popMathStack(void);
 void pushMathStack(int16_t n);
 int16_t popAddrStack(void);
 void pushAddrStack(int16_t n);
-int16_t lookupToken(uint8_t *x,uint8_t *l);
+int16_t lookupToken(char *x, char *l);
 void luFunc(void);
 void numFunc(void);
 void ifFunc(uint8_t x);
@@ -296,12 +296,12 @@ const int16_t progBi[] = { // address actually start at 10000
          
 int16_t progCounter;
 
-uint8_t lineBuffer[128];      /* input line buffer */
+char lineBuffer[128];      /* input line buffer */
 
 uint16_t lineBufferPtr;                 /* input line buffer pointer */
 // uint8_t xit;                    /* set to 1 to kill program */
 
-uint8_t wordBuffer[32];		// just get a word
+char wordBuffer[32];		// just get a word
 
 
 uint8_t getKeyB(){
@@ -418,7 +418,7 @@ void pushAddrStack(int16_t n){
   addrStack[addrStackPtr] = n;
 }
 
-int16_t lookupToken(uint8_t *x,uint8_t *l){    // looking for x in l
+int16_t lookupToken(char *x, char *l){    // looking for x in l
   int16_t i,j,k,n;
   j = 0;
   k = 0;
@@ -466,7 +466,7 @@ int16_t lookupToken(uint8_t *x,uint8_t *l){    // looking for x in l
 void luFunc(){
   int16_t i;
   
-  i = lookupToken(wordBuffer,(uint8_t *)cmdListBi);
+  i = lookupToken(wordBuffer, (char *)cmdListBi);
   
   if(i){
     i += 20000;
@@ -474,13 +474,13 @@ void luFunc(){
     pushMathStack(1);
   } else {
     // need to test internal interp commands
-    i = lookupToken(wordBuffer,(uint8_t *)cmdListBi2);
+    i = lookupToken(wordBuffer, (char *)cmdListBi2);
     if(i){
       i += 10000;
       pushMathStack(i);
       pushMathStack(1);
     } else {
-      i = lookupToken(wordBuffer,cmdList);
+      i = lookupToken(wordBuffer, cmdList);
       if(i){
         pushMathStack(i);
         pushMathStack(1);
@@ -493,7 +493,7 @@ void luFunc(){
 
 void numFunc(){  // the word to test is in wordBuffer
   int16_t i,j,n;
-  puts((const uint8_t *)"in numFunc()\r\n");
+  puts("in numFunc()\r\n");
   puts(wordBuffer);
   // first check for neg sign
   i = 0;
@@ -666,9 +666,9 @@ void execFunc(){
 void execN(int16_t n){
   int16_t i,j,k,m;
   int32_t x,y,z;
-  puts((const uint8_t *)"execN: ");
+  puts("execN: ");
   printNumber(n);
-  puts((const uint8_t *)"\r\n");
+  puts("\r\n");
   switch(n){
     case 1:
   //    xit = 1;
@@ -752,8 +752,8 @@ void execN(int16_t n){
       break;
 
     case 16: // keyt
-      // return a 1 if keys are in ring buffer
-     i = (inputRingPtrXin - inputRingPtrXout) & 0x0F;    // logical result assigned to i
+     // return a 1 if keys are in ring buffer
+     //i = (inputRingPtrXin - inputRingPtrXout) & 0x0F;    // logical result assigned to i
      i = 0;
      pushMathStack(i);
      break;
@@ -761,7 +761,7 @@ void execN(int16_t n){
     case 17: // allot
       prog[progPtr++] = popMathStack();
       if(progPtr >= PROG_SPACE){
-        puts((uint8_t *)"prog mem");
+        puts("prog mem");
       }
       break;
 
@@ -823,7 +823,7 @@ void execN(int16_t n){
 
 
     case 30:  // num
-      puts((const uint8_t *)"in case 30\r\n");
+      puts("in case 30\r\n");
       numFunc();
       break;
 
@@ -999,21 +999,26 @@ void execN(int16_t n){
       break;
 
     case 60: // fec
+      /*
       printHexWord(fecShadow[2]);
       putchar(' ');
       printHexWord(fecShadow[1]);
       putchar(' ');
       printHexWord(fecShadow[0]);
+      */
       break;      
 
     case 61: // fecset
+      /*
       fecShadow[0] = popMathStack();   // lsb
       fecShadow[1] = popMathStack();
       fecShadow[2] = popMathStack();   //msb
+      */
       /*sendToFEC(fecShadow);*/
       break;
 
     case 62: // fecbset
+      /*
       i = popMathStack();
       if(i < 48 && i >= 0){
         j = i >> 4;  // find the byte
@@ -1021,10 +1026,12 @@ void execN(int16_t n){
         i = 1 << i;   // get the bit location
         fecShadow[j] |= i;
       }
+      */
       /*sendToFEC(fecShadow);*/
       break;
 
     case 63: // fecbclr
+      /*
       i = popMathStack();
       if(i < 48 && i >= 0){
         j = i >> 4;  // find the byte
@@ -1032,37 +1039,40 @@ void execN(int16_t n){
         i = 1 << i;   // get the bit location
         fecShadow[j] &= ~i;
       }
+      */
       break;
 
     default:
-      puts((uint8_t *)"opcode ");      
+      puts("opcode ");      
       break;
   }
 }
 
 
 void init_msp4th(void) {
+    uint16_t i;
+
 //  xit = 0;
-  addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
-  progCounter = 10000;
-  progPtr = 1;			// this will be the first opcode
-  i=0;
-  cmdListPtr = 0;
-  cmdList[0] = 0;
-  progOpsPtr = 1;      // just skip location zero .... it makes it easy for us
+    addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
+    progCounter = 10000;
+    progPtr = 1;			// this will be the first opcode
+    i=0;
+    cmdListPtr = 0;
+    cmdList[0] = 0;
+    progOpsPtr = 1;      // just skip location zero .... it makes it easy for us
 
-  dirMemory = (void *) 0;   // its an array starting at zero
+    dirMemory = (void *) 0;   // its an array starting at zero
 
-  lineBufferPtr = 0;
-  for (i=0; i < 128; i++) {
-      lineBuffer[i] = 0;
-  }
+    lineBufferPtr = 0;
+    for (i=0; i < 128; i++) {
+        lineBuffer[i] = 0;
+    }
 
-  for (i=0; i < 32; i++) {
-      wordBuffer[i] = 0;
-  }
+    for (i=0; i < 32; i++) {
+        wordBuffer[i] = 0;
+    }
 
-  getLine();
+    getLine();
 }
 
 
@@ -1070,7 +1080,7 @@ void processLoop(){            // this processes the forth opcodes.
   int16_t opcode;
 
   while(1){
-      puts((const uint8_t *)"processLoop()\r\n");
+      puts("processLoop()\r\n");
     if(progCounter > 9999){
       opcode = progBi[progCounter - 10000];
     } else {
