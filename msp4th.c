@@ -16,6 +16,9 @@
 #define PROG_SPACE 256
 #define USR_OPCODE_SIZE 32
 
+#define LINE_SIZE 128
+#define WORD_SIZE 32
+
 #define BI_PROG_SHIFT 10000
 
 /*
@@ -32,7 +35,7 @@ void pushAddrStack(int16_t n);
 int16_t lookupToken(char *x, char *l);
 void luFunc(void);
 void numFunc(void);
-void ifFunc(uint8_t x);
+void ifFunc(int16_t x);
 void pushnFunc(void);
 void overFunc(void);
 void dfnFunc(void);
@@ -296,12 +299,12 @@ const int16_t progBi[] = { // address actually start at 10000
          
 int16_t progCounter;
 
-char lineBuffer[128];      /* input line buffer */
+char lineBuffer[LINE_SIZE];      /* input line buffer */
 
 uint16_t lineBufferPtr;                 /* input line buffer pointer */
 // uint8_t xit;                    /* set to 1 to kill program */
 
-char wordBuffer[32];		// just get a word
+char wordBuffer[WORD_SIZE];		// just get a word
 
 
 uint8_t getKeyB(){
@@ -388,8 +391,7 @@ void inline listFunction(){
 }
   
 int16_t popMathStack(){
-  int16_t i,j;
-
+  volatile int16_t i,j;
   j = mathStack[0];
   for(i=1;i<MATH_STACK_SIZE;i++){
     mathStack[i-1] = mathStack[i];
@@ -399,7 +401,7 @@ int16_t popMathStack(){
 }
 
 void pushMathStack(int16_t n){
-  uint16_t i;
+  volatile uint16_t i;
   for(i=MATH_STACK_SIZE - 2;i > 0;i--){
     mathStack[i] = mathStack[i-1];
   }
@@ -407,14 +409,14 @@ void pushMathStack(int16_t n){
 }
 
 int16_t popAddrStack(){
-  int16_t j;
+  volatile int16_t j;
   j = addrStack[addrStackPtr];
-  addrStackPtr++;
+  addrStackPtr = addrStackPtr + 1;
   return(j);
 }
 
 void pushAddrStack(int16_t n){
-  addrStackPtr--;
+  addrStackPtr = addrStackPtr - 1;
   addrStack[addrStackPtr] = n;
 }
 
@@ -492,73 +494,92 @@ void luFunc(){
 } 
 
 void numFunc(){  // the word to test is in wordBuffer
-  int16_t i,j,n;
-  puts("in numFunc()\r\n");
-  puts(wordBuffer);
+  volatile int16_t i;
+  volatile int16_t j;
+  volatile int16_t n;
+
+  puts("in numFunc()\r");
+  /*puts(wordBuffer);*/
   // first check for neg sign
+  puts("here\r");
   i = 0;
-  if(wordBuffer[0] == '-'){
-    i++;
+  if(wordBuffer[i] == '-'){
+    i = i + 1;
   }
+  puts("there\r");
   if((wordBuffer[i] >= '0') && (wordBuffer[i] <= '9')){
+    puts("num\r");
     // it is a number 
     j = 1;
     // check if hex
     if(wordBuffer[0] == '0' && wordBuffer[1] == 'x'){
+      puts("hex\r");
       // base 16 number ... just assume all characters are good
       i=2;
       n = 0;
       while(wordBuffer[i]){
         n = n << 4;
-        n += wordBuffer[i] - '0';
+        n = n + wordBuffer[i] - '0';
         if(wordBuffer[i] > '9'){
-          n += -7;
+          n = n - 7;
         }
-        i++;
+        i = i + 1;
       }
     } else {
+      puts("dec\r");
       // base 10 number
       n = 0;
       while(wordBuffer[i]){
-        n *= 10;
-        n += wordBuffer[i] - '0';
-        i++;
+        n = n * 10;
+        n = n + wordBuffer[i] - '0';
+        i = i + 1;
       }
       if(wordBuffer[0] == '-'){
         n = -n;
       }
     }
   } else {
+    puts("not number\r");
     n = 0;
     j = 0;
   }
   /*printNumber(n);*/
   /*printNumber(j);*/
   /*puts("\r\n");*/
+  putchar('.');
   pushMathStack(n);
   pushMathStack(j);
+  putchar('.');
 }
 
-void ifFunc(uint8_t x){     // used as goto if x == 1
-  int16_t addr;
-  int16_t i;
-  if(progCounter > 9999){
-    addr = progBi[progCounter - 10000];
-  } else {
-    addr = prog[progCounter];
-  }
-  progCounter++;
+void ifFunc(int16_t x){     // used as goto if x == 1
+    volatile int16_t addr;
+    volatile uint16_t tmp;
+    volatile int16_t i;
 
-  if(x == 1){
-    // this is a goto
-    progCounter = addr;
-  } else {
-    // this is the "if" processing
-    i = popMathStack();
-    if(!i){
-      progCounter = addr;
+    puts("in ifFunc\r");
+    puts("here\r");
+
+    if(progCounter > 9999){
+        tmp = progCounter - 10000;
+        addr = progBi[tmp];
+    } else {
+        addr = prog[progCounter];
     }
-  }
+    progCounter = progCounter + 1;
+
+    putchar('.');
+    if(x == 1){
+        // this is a goto
+        progCounter = addr;
+    } else {
+        // this is the "if" processing
+        i = popMathStack();
+        if(!i){
+            progCounter = addr;
+        }
+    }
+    putchar('.');
 }
 
 void pushnFunc(){
@@ -568,7 +589,7 @@ void pushnFunc(){
   } else {
     i = prog[progCounter];
   }
-  progCounter++;
+  progCounter = progCounter + 1;
   pushMathStack(i);
 }
 
@@ -583,10 +604,12 @@ void dfnFunc(){
   // this function adds a new def to the list and creats a new opcode
   i = 0;
   while(wordBuffer[i]){
-    cmdList[cmdListPtr++] = wordBuffer[i];
-    i++;
+    cmdList[cmdListPtr] = wordBuffer[i];
+    cmdListPtr = cmdListPtr + 1;
+    i = i + 1;
   }
-  cmdList[cmdListPtr++] = ' ';
+  cmdList[cmdListPtr] = ' ';
+  cmdListPtr = cmdListPtr + 1;
   cmdList[cmdListPtr] = 0;
   i = lookupToken(wordBuffer,cmdList);
   progOps[i] = progPtr;
@@ -594,8 +617,9 @@ void dfnFunc(){
 
 
 void printNumber(int16_t n){
-  int16_t k,x[7];
-  int16_t i,j;
+  volatile int16_t k,x[7];
+  volatile uint16_t i,j;
+  putchar('.');
   k = n;
   if(k < 0){
     k = -k;
@@ -605,17 +629,19 @@ void printNumber(int16_t n){
   do{
     j = k % 10;
     k = k / 10;
-
-    x[i++] = j + '0';
+    x[i] = j + '0';
+    i = i + 1;
   }while(k);
-  i--;
+  i = i - 1;
   
   if(n < 0){
     putchar('-');
   }
   do{
-    putchar(x[i--]);
+    putchar(x[i]);
+    i = i - 1;
   }while(i >= 0);
+  putchar('.');
   putchar(' ');
 }
 
@@ -667,8 +693,8 @@ void execN(int16_t n){
   int16_t i,j,k,m;
   int32_t x,y,z;
   puts("execN: ");
-  printNumber(n);
-  puts("\r\n");
+  printHexWord(n);
+  puts("\r");
   switch(n){
     case 1:
   //    xit = 1;
@@ -759,9 +785,10 @@ void execN(int16_t n){
      break;
 
     case 17: // allot
-      prog[progPtr++] = popMathStack();
+      prog[progPtr] = popMathStack();
+      progPtr = progPtr + 1;
       if(progPtr >= PROG_SPACE){
-        puts("prog mem");
+        puts("prog mem\r");
       }
       break;
 
@@ -823,7 +850,7 @@ void execN(int16_t n){
 
 
     case 30:  // num
-      puts("in case 30\r\n");
+      puts("in case 30\r");
       numFunc();
       break;
 
@@ -900,7 +927,7 @@ void execN(int16_t n){
       j = popAddrStack();  // loop address
       k = popAddrStack();  // count
       m = popAddrStack();  // limit
-      k++;		   // up the count
+      k = k + 1;           // up the count
       if(k >= m){
         // we are done
       } else {
@@ -1043,14 +1070,14 @@ void execN(int16_t n){
       break;
 
     default:
-      puts("opcode ");      
+      puts("opcode \r");      
       break;
   }
 }
 
 
 void init_msp4th(void) {
-    uint16_t i;
+    volatile uint16_t i;
 
 //  xit = 0;
     addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
@@ -1064,11 +1091,11 @@ void init_msp4th(void) {
     dirMemory = (void *) 0;   // its an array starting at zero
 
     lineBufferPtr = 0;
-    for (i=0; i < 128; i++) {
+    for (i=0; i < LINE_SIZE; i++) {
         lineBuffer[i] = 0;
     }
 
-    for (i=0; i < 32; i++) {
+    for (i=0; i < WORD_SIZE; i++) {
         wordBuffer[i] = 0;
     }
 
@@ -1078,16 +1105,18 @@ void init_msp4th(void) {
 
 void processLoop(){            // this processes the forth opcodes.
   int16_t opcode;
+  int16_t tmp;
 
   while(1){
-      puts("processLoop()\r\n");
+      puts("processLoop()\r");
     if(progCounter > 9999){
-      opcode = progBi[progCounter - 10000];
+      tmp = progCounter - 10000;
+      opcode = progBi[tmp];
     } else {
       opcode = prog[progCounter];
     }
 
-    progCounter++;
+    progCounter = progCounter + 1;
 
     if(opcode > 19999){
       // this is a built in opcode

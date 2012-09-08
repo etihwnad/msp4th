@@ -14,7 +14,7 @@ int putchar(int c)
         // wait for register to clear
         i++;
     }
-    UART0_TDR = c;
+    UART0_TDR = (c & 0xff);
     return 0;
 }
 
@@ -24,7 +24,7 @@ int getchar(void){
   while ((UART0_SR & RDRF) == 0) {
       // wait for char
   }
-  c = UART0_RDR & 0x00ff;
+  c = (UART0_RDR & 0x00ff);
   return c;
 } 
 

@@ -21,9 +21,10 @@ SOURCES = main.c ns430-uart.c msp4th.c
 INCLUDES = -I.
 # Add or subtract whatever MSPGCC flags you want. There are plenty more
 #######################################################################################
-CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
+#CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
+CFLAGS   = -mmcu=$(MCU) -O1 -Wall -Wunused -mendup-at=main $(INCLUDES)   
 #ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
-ASFLAGS  = -mmcu=$(MCU) -Os -Wall -Wunused
+ASFLAGS  = -mmcu=$(MCU) -O1 -Wall -Wunused
 LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map -T ldscript_ns430
 ########################################################################################
 CC       = msp430-gcc
@@ -52,7 +53,7 @@ OBJECTS = $(SOURCES:.c=.o)
 ASSEMBLYS = $(SOURCES:.c=.lst)
 
 #all: $(TARGET).elf $(TARGET).hex $(TARGET).txt 
-all: $(TARGET).elf $(TARGET).hex $(ASSEMBLYS)
+all: $(TARGET).elf $(TARGET).hex $(TARGET).xout $(ASSEMBLYS)
 
 $(TARGET).elf: $(OBJECTS)
 	@echo "Linking $@"
@@ -64,6 +65,11 @@ $(TARGET).elf: $(OBJECTS)
 
 %.hex: %.elf
 	$(OBJCOPY) -O ihex $< $@
+
+%.xout: %.elf
+	msp430-objdump --disassemble-all $< \
+	    | ../inc2syms.py ../ns430-atoi.inc \
+	    | ../rename_regs.sh > $@
 
 %.txt: %.hex
 	$(MAKETXT) -O $@ -TITXT $< -I
@@ -90,6 +96,10 @@ endif
 %.d: %.c
 	@echo "Generating dependencies $@ from $<"
 	$(CC) -M ${CFLAGS} $< >$@
+
+.PHONY:	flash
+flash: $(TARGET).hex
+	./flash.py -e $(TARGET).hex
 
 #.SILENT:
 .PHONY:       clean

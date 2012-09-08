@@ -1394,7 +1394,6 @@ NAKED(_unexpected_){
 
 
 INTERRUPT_VECTORS = { 
-
    main,     // RST          just jump to next
    main,     // NMI          restart at main
    main,               // External IRQ

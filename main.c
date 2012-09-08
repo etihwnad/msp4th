@@ -10,26 +10,40 @@
 #include "msp4th.h"
 
 
+#define DEVBOARD_CLOCK 25000000L
+#define BAUDRATE 4800L
+
+
+NAKED(_reset_vector__){
+  __asm__ __volatile__("br #main"::);
+}
+
+
+static void __inline__ delay(register unsigned int n){
+  __asm__ __volatile__ (
+      "1: \n"
+      " dec     %[n] \n"
+      " jne     1b \n"
+      : [n] "+r"(n));
+}
+
+
 int main(void){
+
+    uint16_t tmp;
+
+    dint();
 
     PAPER = 0x0030;
     PAOUT = 0x0000;
     PAOEN = 0x0010;  // set data direction registers
 
-    init_msp4th();
-
-    /*TMR0_CNT = 0x0000;*/
-    /*TMR0_SR = 0;*/
-    /*TMR0_RC = 1059;*/
-    /*TMR0_CR = 0x003C;*/
-
-    /* 8e6 / (16*19200) - 1 = 25.0416 */
-    /* 8e6 / (16*2400) - 1 = 207.33 */
-    /* 25e6 / (16*2400) - 1 = 207.33 */
-    UART0_BCR = BCR(25000000L, 2400L);
+    UART0_BCR = BCR(DEVBOARD_CLOCK, BAUDRATE);
     UART0_CR = UARTEn;
 
-    dint();
+    tmp = UART0_SR;
+
+
     putchar('!');   
 
     char c;
@@ -49,7 +63,10 @@ int main(void){
     putchar('g');
     puts("This is a test of the UART serial printing\r\nit really does work ...\r\n");
 
+    init_msp4th();
     processLoop();
 
     return 0;
 }
+
+
