@@ -1,8 +1,6 @@
 
 
-#include <stdio.h>
-#include <signal.h>
-#include <iomacros.h>
+#include "ns430.h"
 
 #include "ns430-atoi.h"
 #include "ns430-uart.h"
@@ -27,7 +25,6 @@ static void __inline__ delay(register unsigned int n){
       : [n] "+r"(n));
 }
 
-
 int main(void){
 
     uint16_t tmp;
@@ -44,24 +41,24 @@ int main(void){
     tmp = UART0_SR;
 
 
-    putchar('!');   
+    uart_putchar('!');
 
     char c;
     while (1) {
-        c = getchar();
+        c = uart_getchar();
         if (c == '`')
             break;
-        putchar(c);
+        uart_putchar(c);
     }
 
-    putchar('t');
-    putchar('e');
-    putchar('s');
-    putchar('t');
-    putchar('i');
-    putchar('n');
-    putchar('g');
-    puts("This is a test of the UART serial printing\r\nit really does work ...\r\n");
+    uart_putchar('t');
+    uart_putchar('e');
+    uart_putchar('s');
+    uart_putchar('t');
+    uart_putchar('i');
+    uart_putchar('n');
+    uart_putchar('g');
+    uart_puts((uint8_t *)"This is a test of the UART serial printing\r\nit really does work ...\r\n");
 
     init_msp4th();
     processLoop();

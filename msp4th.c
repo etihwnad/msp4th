@@ -1,18 +1,19 @@
 
 #include <signal.h>
-#include <stdio.h>
 
 #include "ns430-atoi.h"
 #include "ns430-uart.h"
 #include "msp4th.h"
 
 
+#define ALIGN_2 __attribute__ ((aligned (2)))
+
 /* 
  * Configuration constants
  */
 #define CMD_LIST_SIZE 128
-#define MATH_STACK_SIZE 16
-#define ADDR_STACK_SIZE 32
+#define MATH_STACK_SIZE 32
+#define ADDR_STACK_SIZE 64
 #define PROG_SPACE 256
 #define USR_OPCODE_SIZE 32
 
@@ -32,7 +33,7 @@ int16_t popMathStack(void);
 void pushMathStack(int16_t n);
 int16_t popAddrStack(void);
 void pushAddrStack(int16_t n);
-int16_t lookupToken(char *x, char *l);
+int16_t lookupToken(uint8_t *x, uint8_t *l);
 void luFunc(void);
 void numFunc(void);
 void ifFunc(int16_t x);
@@ -53,7 +54,7 @@ void execFunc(void);
 // The order is important .... don't insert anything!
 // the order matches the execN function
 
-const char cmdListBi[] = 
+const uint8_t cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
               "> = .hb gw dfn "                     // 11 -> 15
@@ -71,7 +72,7 @@ const char cmdListBi[] =
 
 // these commands are interps
 
-const char cmdListBi2[] = {"[ : var "};
+const uint8_t cmdListBi2[] = {"[ : var "};
 
 // these values point to where in progBi[] these routines start
 
@@ -79,19 +80,18 @@ const int16_t cmdList2N[] = {0,10000,10032,10135};  // need an extra zero at the
 
 #define LAST_PREDEFINED 40	// update this when we add commands to the built in list
 
-int16_t mathStack[MATH_STACK_SIZE];
+int16_t ALIGN_2 mathStack[MATH_STACK_SIZE];
 
-int16_t addrStack[ADDR_STACK_SIZE];
-int16_t addrStackPtr;
+int16_t ALIGN_2 addrStack[ADDR_STACK_SIZE];
+volatile uint16_t addrStackPtr;
 
-int16_t prog[PROG_SPACE];  // user programs are placed here
-int16_t progPtr;           // next open space for user opcodes
-int16_t progOps[USR_OPCODE_SIZE];
-int16_t progOpsPtr;
-char cmdList[CMD_LIST_SIZE];  // just a string of user defined names
-int16_t cmdListPtr;
+int16_t ALIGN_2 prog[PROG_SPACE];  // user programs are placed here
+volatile uint16_t progPtr;           // next open space for user opcodes
+int16_t ALIGN_2 progOps[USR_OPCODE_SIZE];
+volatile uint16_t progOpsPtr;
+uint8_t ALIGN_2 cmdList[CMD_LIST_SIZE];  // just a string of user defined names
+volatile uint16_t cmdListPtr;
 
-int16_t subSecondClock;
 int16_t fastTimer;
 int16_t slowTimer;
 
@@ -102,7 +102,7 @@ uint16_t buckets[260];  // use buckets[256] for total
 
 // to flag the initial built in functions from the rest, save the negative of them in the program space (prog).
 
-const int16_t progBi[] = { // address actually start at 10000
+const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
 
    // this is the monitor in compiled forth code (by hand)
 
@@ -116,7 +116,7 @@ const int16_t progBi[] = { // address actually start at 10000
 
    20008,        //   8 drop
    20034,        //   9 lu       look up word
-   20022,10026,  //  10 if       did we found the word in the dictionary
+   20022,10026,  //  10 if       did we find the word in the dictionary
    
    20035,']',    //  12 pushn    next value on math stack  look for ]
 
@@ -297,130 +297,175 @@ const int16_t progBi[] = { // address actually start at 10000
    
    };   
          
-int16_t progCounter;
+volatile uint16_t progCounter;
 
-char lineBuffer[LINE_SIZE];      /* input line buffer */
+uint8_t lineBuffer[LINE_SIZE];      /* input line buffer */
 
-uint16_t lineBufferPtr;                 /* input line buffer pointer */
+volatile uint16_t lineBufferPtr;                 /* input line buffer pointer */
 // uint8_t xit;                    /* set to 1 to kill program */
 
-char wordBuffer[WORD_SIZE];		// just get a word
+uint8_t wordBuffer[WORD_SIZE];		// just get a word
 
 
 uint8_t getKeyB(){
-  uint8_t i;
-  i = lineBuffer[lineBufferPtr];
-  if(i != 0) lineBufferPtr++;
-  return(i);
-}
-
-
-void getLine(){
-  int16_t i;
-  lineBufferPtr = 0;
-
-  putchar(0x0D);
-  putchar(0x0A);
-  putchar('>');   // this is our prompt
-
-  i = 1;
-  while(i){  // just hang in loop until we get CR
-    i = getchar();
-    if(i == 0x08){
-      if(lineBufferPtr > 0){
-        putchar(0x08);
-        putchar(' ');
-        putchar(0x08);
-        lineBufferPtr--;
-      }
-    } else {
-      putchar(i);
-      if(i == 0x0D){
-        // hit cr
-        lineBuffer[lineBufferPtr] = 0;
-        i = 0;
-      } else {
-
-        lineBuffer[lineBufferPtr++] = i;
-        lineBuffer[lineBufferPtr] = 0;
-
-        if(lineBufferPtr > 125){  // prevent overflow of line buffer
-          i=0;
-        }
-      }
-    }
+  volatile uint8_t c;
+  c = lineBuffer[lineBufferPtr];
+  if (c != 0) {
+      lineBufferPtr = lineBufferPtr + 1;
   }
-  putchar(0x0A);
-  lineBufferPtr = 0;
+  return(c);
 }
 
 
-void getWord(){
-  int16_t k;
-  uint8_t c;
-  wordBuffer[0] = 0;
-  while(wordBuffer[0] == 0){
-    k = 0;
-    c = getKeyB();
-    while(( c <= ' ') && ( c != 0 )) c = getKeyB();    /* strip leading spaces */
-    if( c > 0 ){
-      if( c == '"' ){
+void getLine()
+{
+    volatile uint16_t waiting;
+    volatile uint8_t c;
+
+    lineBufferPtr = 0;
+
+    uart_putchar('\r');
+    uart_putchar('\n');
+    uart_putchar('>');   // this is our prompt
+
+    waiting = 1;
+    while (waiting) {  // just hang in loop until we get CR
+        c = uart_getchar();
+
+        if (c == '\b') {
+            if (lineBufferPtr > 0) {
+                uart_putchar('\b');
+                uart_putchar(' ');
+                uart_putchar('\b');
+                lineBufferPtr--;
+            }
+        } else {
+            uart_putchar(c);
+            if (c == '\r') {
+                // hit cr
+                lineBuffer[lineBufferPtr] = 0;
+                waiting = 0;
+            } else {
+
+                lineBuffer[lineBufferPtr++] = c;
+                lineBuffer[lineBufferPtr] = 0;
+
+                if(lineBufferPtr >= 127) {  // prevent overflow of line buffer
+                    waiting = 0;
+                }
+            }
+        }
+    }
+    uart_putchar('\n');
+    lineBufferPtr = 0;
+}
+
+
+void getWord(void)
+{
+    volatile uint16_t k;
+    volatile uint8_t c;
+    volatile uint16_t waiting;
+
+    wordBuffer[0] = 0;
+
+    uart_putchar('.');
+    uart_putchar('.');
+
+    /*while (wordBuffer[0] == 0) {*/
+    waiting = 1;
+    while (waiting) {
+        k = 0;
         c = getKeyB();
-        while((c != '"')&&(c != 0)){
-          if(c != '"') wordBuffer[k++] = c;
-          c = getKeyB();
+
+        while ((c <= ' ') && (c != 0)) {
+            c = getKeyB();    /* strip leading spaces */
+            /*uart_putchar(c);*/
         }
-      } else {
-        while(c > ' ' && c != 0){
-          wordBuffer[k++] = c;
-          c = getKeyB();
+
+        if (c > 0) {
+            /*if (0 && (c == '"')) {*/
+                /*c = getKeyB();*/
+                /*uart_putchar(c);*/
+
+                /*while ((c != '"') && (c != 0)) {*/
+                    /*if (c != '"') {*/
+                        /*wordBuffer[k++] = c;*/
+                    /*}*/
+                    /*c = getKeyB();*/
+                    /*uart_putchar(c);*/
+                /*}*/
+            /*} else {*/
+                while (c > ' ') {
+                    wordBuffer[k++] = c;
+                    uart_putchar(c);
+                    c = getKeyB();
+                }
+            /*}*/
+
+            wordBuffer[k] = 0;
+            waiting = 0;
+        } else {
+            wordBuffer[0] = 0;
+            getLine();
         }
-      }
-      wordBuffer[k] = 0;
-    } else {
-      wordBuffer[0] = 0;
-      getLine();     
     }
-  }
 }
 
-void inline listFunction(){
-  puts(cmdListBi);
-  puts(cmdListBi2);
-  puts(cmdList);
+void inline listFunction()
+{
+    uart_puts((str_t *)cmdListBi);
+    uart_puts((str_t *)cmdListBi2);
+    uart_puts((str_t *)cmdList);
 }
   
-int16_t popMathStack(){
-  volatile int16_t i,j;
-  j = mathStack[0];
-  for(i=1;i<MATH_STACK_SIZE;i++){
-    mathStack[i-1] = mathStack[i];
-  }
+int16_t popMathStack(void)
+{
+    volatile uint16_t i;
+    volatile int16_t j,k;
 
-  return(j);
+    k = 1;
+    j = mathStack[0];
+    uart_putchar('1');
+    uart_putchar('2');
+
+    for (i=1;i<MATH_STACK_SIZE;i++) {
+    uart_putchar('s');
+        mathStack[i-1] = mathStack[i];
+    }
+    uart_putchar('3');
+    k = 0;
+    return(j);
 }
 
-void pushMathStack(int16_t n){
-  volatile uint16_t i;
-  for(i=MATH_STACK_SIZE - 2;i > 0;i--){
-    mathStack[i] = mathStack[i-1];
-  }
-  mathStack[0] = n;
+void pushMathStack(int16_t n)
+{
+    volatile uint16_t i;
+    volatile uint16_t tmp;
+    printNumber(n);
+    uart_puts((str_t *)"<-- push math");
+    for (i=MATH_STACK_SIZE - 2; i > 0; i--) {
+        tmp = i - 1;
+        mathStack[i] = mathStack[tmp];
+    }
+    mathStack[0] = n;
 }
 
-int16_t popAddrStack(){
-  volatile int16_t j;
-  j = addrStack[addrStackPtr];
-  addrStackPtr = addrStackPtr + 1;
-  return(j);
+int16_t popAddrStack(void)
+{
+    volatile int16_t j;
+    j = addrStack[addrStackPtr];
+    addrStackPtr = addrStackPtr + 1;
+    return(j);
 }
 
-void pushAddrStack(int16_t n){
-  addrStackPtr = addrStackPtr - 1;
-  addrStack[addrStackPtr] = n;
+void pushAddrStack(int16_t n)
+{
+    addrStackPtr = addrStackPtr - 1;
+    addrStack[addrStackPtr] = n;
 }
 
-int16_t lookupToken(char *x, char *l){    // looking for x in l
+int16_t lookupToken(uint8_t *x, uint8_t *l){    // looking for x in l
   int16_t i,j,k,n;
   j = 0;
   k = 0;
@@ -468,7 +513,7 @@ int16_t lookupToken(char *x, char *l){    // looking for x in l
 void luFunc(){
   int16_t i;
   
-  i = lookupToken(wordBuffer, (char *)cmdListBi);
+  i = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
   
   if(i){
     i += 20000;
@@ -476,7 +521,7 @@ void luFunc(){
     pushMathStack(1);
   } else {
     // need to test internal interp commands
-    i = lookupToken(wordBuffer, (char *)cmdListBi2);
+    i = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
     if(i){
       i += 10000;
       pushMathStack(i);
@@ -493,72 +538,72 @@ void luFunc(){
   }  
 } 
 
-void numFunc(){  // the word to test is in wordBuffer
-  volatile int16_t i;
-  volatile int16_t j;
-  volatile int16_t n;
+void numFunc()
+{  // the word to test is in wordBuffer
+    volatile uint16_t i;
+    volatile int16_t j;
+    volatile int16_t n;
 
-  puts("in numFunc()\r");
-  /*puts(wordBuffer);*/
-  // first check for neg sign
-  puts("here\r");
-  i = 0;
-  if(wordBuffer[i] == '-'){
-    i = i + 1;
-  }
-  puts("there\r");
-  if((wordBuffer[i] >= '0') && (wordBuffer[i] <= '9')){
-    puts("num\r");
-    // it is a number 
-    j = 1;
-    // check if hex
-    if(wordBuffer[0] == '0' && wordBuffer[1] == 'x'){
-      puts("hex\r");
-      // base 16 number ... just assume all characters are good
-      i=2;
-      n = 0;
-      while(wordBuffer[i]){
-        n = n << 4;
-        n = n + wordBuffer[i] - '0';
-        if(wordBuffer[i] > '9'){
-          n = n - 7;
-        }
+    uart_puts((str_t *)"in numFunc()");
+
+    // first check for neg sign
+    i = 0;
+    if (wordBuffer[i] == '-') {
         i = i + 1;
-      }
-    } else {
-      puts("dec\r");
-      // base 10 number
-      n = 0;
-      while(wordBuffer[i]){
-        n = n * 10;
-        n = n + wordBuffer[i] - '0';
-        i = i + 1;
-      }
-      if(wordBuffer[0] == '-'){
-        n = -n;
-      }
     }
-  } else {
-    puts("not number\r");
-    n = 0;
-    j = 0;
-  }
-  /*printNumber(n);*/
-  /*printNumber(j);*/
-  /*puts("\r\n");*/
-  putchar('.');
-  pushMathStack(n);
-  pushMathStack(j);
-  putchar('.');
+
+    uart_puts((str_t *)"there");
+
+    if ((wordBuffer[i] >= '0') && (wordBuffer[i] <= '9')) {
+        uart_puts((str_t *)"num");
+        // it is a number 
+        j = 1;
+        // check if hex
+        if(wordBuffer[0] == '0' && wordBuffer[1] == 'x'){
+            uart_puts((str_t *)"hex");
+            // base 16 number ... just assume all characters are good
+            i = 2;
+            n = 0;
+            while(wordBuffer[i]){
+                n = n << 4;
+                n = n + wordBuffer[i] - '0';
+                if(wordBuffer[i] > '9'){
+                    n = n - 7;
+                }
+                i = i + 1;
+            }
+        } else {
+            uart_puts((str_t *)"dec");
+            // base 10 number
+            n = 0;
+            while(wordBuffer[i]){
+                n = n * 10;
+                n = n + wordBuffer[i] - '0';
+                i = i + 1;
+            }
+            if(wordBuffer[0] == '-'){
+                n = -n;
+            }
+        }
+    } else {
+        uart_puts((str_t *)"not number");
+        n = 0;
+        j = 0;
+    }
+
+    uart_putchar('.');
+    pushMathStack(n);
+    uart_putchar('.');
+    pushMathStack(j);
+    uart_putchar('.');
 }
 
 void ifFunc(int16_t x){     // used as goto if x == 1
-    volatile int16_t addr;
+    volatile uint16_t addr;
     volatile uint16_t tmp;
     volatile int16_t i;
 
-    puts("in ifFunc\r");
-    puts("here\r");
+    uart_puts((str_t *)"in ifFunc");
 
     if(progCounter > 9999){
         tmp = progCounter - 10000;
@@ -566,20 +611,29 @@ void ifFunc(int16_t x){     // used as goto if x == 1
     } else {
         addr = prog[progCounter];
     }
-    progCounter = progCounter + 1;
 
-    putchar('.');
+    printNumber(addr);
+    uart_puts((str_t *)"<-- addr");
+
+    progCounter = progCounter + 1;
+    uart_putchar('.');
     if(x == 1){
         // this is a goto
+        uart_putchar('g');
         progCounter = addr;
+        /*uart_puts((str_t *)"goto");*/
     } else {
         // this is the "if" processing
+        uart_putchar('i');
         i = popMathStack();
-        if(!i){
+        /*uart_putchar('a');*/
+        /*printNumber((int16_t)addr);*/
+        if(i == 0){
             progCounter = addr;
         }
+        uart_puts((str_t *)"<-- if");
     }
-    putchar('.');
+    uart_putchar('.');
 }
 
 void pushnFunc(){
@@ -616,33 +670,44 @@ void dfnFunc(){
 }
 
 
-void printNumber(int16_t n){
-  volatile int16_t k,x[7];
-  volatile uint16_t i,j;
-  putchar('.');
-  k = n;
-  if(k < 0){
-    k = -k;
-  }
+void printNumber(register int16_t n)
+{
+    volatile uint16_t i;
+    volatile int16_t rem;
+    /*int16_t k;*/
+    uint8_t x[7];
 
-  i=0;
-  do{
-    j = k % 10;
-    k = k / 10;
-    x[i] = j + '0';
-    i = i + 1;
-  }while(k);
-  i = i - 1;
-  
-  if(n < 0){
-    putchar('-');
-  }
-  do{
-    putchar(x[i]);
-    i = i - 1;
-  }while(i >= 0);
-  putchar('.');
-  putchar(' ');
+    //uart_putchar('.');
+    //uart_putchar('.');
+
+    /*k = n;*/
+    if (n < 0) {
+        uart_putchar('-');
+        n = -n;
+    }
+
+    i = 0;
+    do {
+        rem = n % 10;
+        //uart_putchar('r');
+        //printHexWord(rem);
+        //uart_putchar(' ');
+        //uart_putchar('n');
+        //printHexWord(n);
+        //uart_putchar('.');
+        x[i] = (uint8_t)rem + (uint8_t)'0';
+        n = n / 10;
+        i = i + 1;
+    } while((n != 0) && (i < 7));
+
+    /*i = i - 1;*/
+    do{
+        i = i - 1;
+        uart_putchar(x[i]);
+    } while (i > 0);
+
+    //uart_putchar('.');
+    uart_putchar(' ');
 }
 
 void printHexChar(int16_t n){
@@ -651,7 +716,7 @@ void printHexChar(int16_t n){
     n += 7;
   }
   n += '0';
-  putchar(n);
+  uart_putchar(n);
 }
 
 void printHexByte(int16_t n){
@@ -690,11 +755,11 @@ void execFunc(){
 
 
 void execN(int16_t n){
-  int16_t i,j,k,m;
+  volatile int16_t i,j,k,m;
   int32_t x,y,z;
-  puts("execN: ");
-  printHexWord(n);
-  puts("\r");
+  uart_puts((str_t *)"execN: ");
+  printNumber(n);
+  uart_puts((str_t *)"");
   switch(n){
     case 1:
   //    xit = 1;
@@ -788,7 +853,7 @@ void execN(int16_t n){
       prog[progPtr] = popMathStack();
       progPtr = progPtr + 1;
       if(progPtr >= PROG_SPACE){
-        puts("prog mem\r");
+        uart_puts((str_t *)"prog mem");
       }
       break;
 
@@ -832,7 +897,7 @@ void execN(int16_t n){
     case 26:  // until
       i = popAddrStack();
       j = popMathStack();
-      if(!j){
+      if(j == 0){
         addrStackPtr--;  // number is still there ... just fix the pointer
         progCounter = i;
       }
@@ -850,7 +915,7 @@ void execN(int16_t n){
 
 
     case 30:  // num
-      puts("in case 30\r");
+      uart_puts((str_t *)"in case 30");
       numFunc();
       break;
 
@@ -883,11 +948,11 @@ void execN(int16_t n){
       break;
 
     case 38: // pwrd
-      puts(wordBuffer);
+      uart_puts(wordBuffer);
       break;
 
     case 39: // emit
-      putchar(popMathStack());
+      uart_putchar(popMathStack());
       break;
 
     case 40: // ;
@@ -975,12 +1040,12 @@ void execN(int16_t n){
       break;
       
     case 52: // key     get a key from input .... (wait for it)
-      pushMathStack(getchar());
+      pushMathStack(uart_getchar());
       break;
 
     case 53: // cr
-      putchar(0x0D);
-      putchar(0x0A);
+      uart_putchar(0x0D);
+      uart_putchar(0x0A);
       break;
 
     case 54: // hist
@@ -1009,7 +1074,7 @@ void execN(int16_t n){
     case 58: // hstat
       for(i=256;i<260;i++){
         printHexWord(buckets[i]);
-        putchar(' ');
+        uart_putchar(' ');
       }
       break;
 
@@ -1017,10 +1082,10 @@ void execN(int16_t n){
       for(i=0;i<256;i++){
         if(buckets[i]){
           printHexByte(i);
-          putchar(' ');
+          uart_putchar(' ');
           printHexWord(buckets[i]);
-          putchar(0x0D);
-          putchar(0x0A);
+          uart_putchar(0x0D);
+          uart_putchar(0x0A);
         }
       }
       break;
@@ -1028,9 +1093,9 @@ void execN(int16_t n){
     case 60: // fec
       /*
       printHexWord(fecShadow[2]);
-      putchar(' ');
+      uart_putchar(' ');
       printHexWord(fecShadow[1]);
-      putchar(' ');
+      uart_putchar(' ');
       printHexWord(fecShadow[0]);
       */
       break;      
@@ -1070,14 +1135,26 @@ void execN(int16_t n){
       break;
 
     default:
-      puts("opcode \r");      
+      uart_puts((str_t *)"opcode ");      
       break;
   }
 }
 
 
-void init_msp4th(void) {
+static int16_t __inline__ RAMerrors(void){
+    int16_t errors;
+    __asm__ __volatile__ ( "mov r9, %0\n" : [res] "=r" (errors));
+    return errors;
+}
+
+
+void init_msp4th(void)
+{
     volatile uint16_t i;
+
+    printNumber(RAMerrors());
+    uart_puts((uint8_t *)"<-- RAM errors");
+
 
 //  xit = 0;
     addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
@@ -1100,32 +1177,41 @@ void init_msp4th(void) {
     }
 
     getLine();
+    pushMathStack(0);
 }
 
 
-void processLoop(){            // this processes the forth opcodes.
-  int16_t opcode;
-  int16_t tmp;
+void processLoop() // this processes the forth opcodes.
+{
+    volatile uint16_t opcode;
+    volatile uint16_t tmp;
 
-  while(1){
-      puts("processLoop()\r");
-    if(progCounter > 9999){
-      tmp = progCounter - 10000;
-      opcode = progBi[tmp];
-    } else {
-      opcode = prog[progCounter];
-    }
+    while(1){
+        uart_puts((str_t *)"processLoop()");
 
-    progCounter = progCounter + 1;
+        printNumber(progCounter);
+        uart_puts((str_t *)"<-- progCounter");
 
-    if(opcode > 19999){
-      // this is a built in opcode
-      execN(opcode - 20000);
-    } else {
-      pushAddrStack(progCounter);
-      progCounter = progOps[opcode];
-    }
-  }
+        if(progCounter > 9999){
+            tmp = progCounter - 10000;
+            opcode = progBi[tmp];
+        } else {
+            opcode = prog[progCounter];
+        }
+
+        printNumber(opcode);
+        uart_puts((str_t *)"<-- opcode");
+
+        progCounter = progCounter + 1;
+
+        if(opcode > 19999){
+            // this is a built in opcode
+            execN(opcode - 20000);
+        } else {
+            pushAddrStack(progCounter);
+            progCounter = progOps[opcode];
+        }
+    } // while ()
 }
 
 

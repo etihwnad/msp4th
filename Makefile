@@ -22,9 +22,9 @@ INCLUDES = -I.
 # Add or subtract whatever MSPGCC flags you want. There are plenty more
 #######################################################################################
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
-CFLAGS   = -mmcu=$(MCU) -O1 -Wall -Wunused -mendup-at=main $(INCLUDES)   
+CFLAGS   = -mmcu=$(MCU) -Wall -Wunused -mendup-at=main $(INCLUDES)
 #ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
-ASFLAGS  = -mmcu=$(MCU) -O1 -Wall -Wunused
+ASFLAGS  = -mmcu=$(MCU) -Wall -Wunused -mendup-at=main $(INCLUDES)
 LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map -T ldscript_ns430
 ########################################################################################
 CC       = msp430-gcc
