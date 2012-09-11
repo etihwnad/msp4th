@@ -1,8 +1,20 @@
 
-#include <signal.h>
-
+#if defined(MSP430)
+/* use devboard uart */
 #include "ns430-atoi.h"
 #include "ns430-uart.h"
+
+#else
+/* mixins to test msp4th on PC */
+#include <stdio.h>
+#include <stdint.h>
+typedef uint8_t str_t;
+void uart_putchar(uint8_t c) { putchar(c); }
+uint8_t uart_getchar(void) { return (uint8_t)getchar(); }
+void uart_puts(uint8_t *s) { puts((char *)s); }
+#endif
+
+
 #include "msp4th.h"
 
 
@@ -341,7 +353,7 @@ void getLine()
             }
         } else {
             uart_putchar(c);
-            if (c == '\r') {
+            if ((c == '\r') || (c == '\n')) {
                 // hit cr
                 lineBuffer[lineBufferPtr] = 0;
                 waiting = 0;
@@ -1060,13 +1072,13 @@ void execN(int16_t n){
       break;
 
     case 56: // fasttimer
-      i = (int16_t )&fastTimer;
+      i = (int16_t )fastTimer;
       i = i>>1;
       pushMathStack(i);
       break;
 
     case 57:  // slowtimer
-      i = (int16_t )&slowTimer;
+      i = (int16_t )slowTimer;
       i = i>>1;
       pushMathStack(i);
       break;
@@ -1141,19 +1153,23 @@ void execN(int16_t n){
 }
 
 
+#if defined(MSP430)
 static int16_t __inline__ RAMerrors(void){
     int16_t errors;
     __asm__ __volatile__ ( "mov r9, %0\n" : [res] "=r" (errors));
     return errors;
 }
+#endif
 
 
 void init_msp4th(void)
 {
     volatile uint16_t i;
 
+#if defined(MSP430)
     printNumber(RAMerrors());
     uart_puts((uint8_t *)"<-- RAM errors");
+#endif
 
 
 //  xit = 0;
