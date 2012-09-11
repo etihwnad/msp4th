@@ -8,7 +8,7 @@
 #include "msp4th.h"
 
 
-#define DEVBOARD_CLOCK 25000000L
+#define DEVBOARD_CLOCK 12000000L
 #define BAUDRATE 4800L
 
 
