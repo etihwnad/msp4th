@@ -22,7 +22,7 @@ INCLUDES = -I.
 # Add or subtract whatever MSPGCC flags you want. There are plenty more
 #######################################################################################
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
-CFLAGS   = -mmcu=$(MCU) -Wall -Wunused -mendup-at=main $(INCLUDES)
+CFLAGS   = -mmcu=$(MCU) -Werror -Wall -Wunused -mendup-at=main $(INCLUDES)
 #ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 ASFLAGS  = -mmcu=$(MCU) -Wall -Wunused -mendup-at=main $(INCLUDES)
 LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map -T ldscript_ns430
@@ -99,7 +99,7 @@ endif
 
 .PHONY:	flash
 flash: $(TARGET).hex
-	./flash.py -e $(TARGET).hex
+	./flash.py $(ERASE) $(TARGET).hex
 
 #.SILENT:
 .PHONY:       clean
