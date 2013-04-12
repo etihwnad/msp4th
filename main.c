@@ -12,7 +12,8 @@
 #define BAUDRATE 4800L
 
 
-NAKED(_reset_vector__){
+/*NAKED(_reset_vector__){*/
+void __attribute__ ((naked)) _reset_vector__(void) {
   __asm__ __volatile__("br #main"::);
 }
 
@@ -23,6 +24,15 @@ static void __inline__ delay(register unsigned int n){
       " dec     %[n] \n"
       " jne     1b \n"
       : [n] "+r"(n));
+}
+
+
+static void __inline__ dint(void) {
+  __asm__ __volatile__ ( "dint" :: );
+}
+
+static void __inline__ eint(void){
+  __asm__ __volatile__ ( "eint" :: );
 }
 
 int main(void){
