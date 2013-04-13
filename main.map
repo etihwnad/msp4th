@@ -1,0 +1,605 @@
+Archive member included because of file (symbol)
+
+/usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+                              msp4th.o (__mulhi3)
+/usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+                              msp4th.o (__divmodhi4)
+/usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+                              /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o) (__udivmodhi4)
+/usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+                              main.o (memcpy)
+/usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+                              /usr/lib/gcc/msp430/4.5.3/crt0ivtbl16.o (_unexpected_)
+
+Allocating common symbols
+Common symbol       size              file
+
+buckets             0x208             msp4th.o
+lineBuffer          0x80              msp4th.o
+addrStack           0x80              msp4th.o
+addrStackPtr        0x2               msp4th.o
+cmdListPtr          0x2               msp4th.o
+progPtr             0x2               msp4th.o
+wordBuffer          0x20              msp4th.o
+prog                0x200             msp4th.o
+fastTimer           0x2               msp4th.o
+dirMemory           0x2               msp4th.o
+mathStack           0x40              msp4th.o
+progOpsPtr          0x2               msp4th.o
+progOps             0x40              msp4th.o
+slowTimer           0x2               msp4th.o
+progCounter         0x2               msp4th.o
+lineBufferPtr       0x2               msp4th.o
+cmdList             0x80              msp4th.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+text             0x00004000         0x00003fe0         xr
+data             0x00004000         0x00003fe0         xrw
+vectors          0x0000ffe0         0x00000040         rw
+bootloader       0x00000800         0x00000800         xr
+infomem          0x00000000         0x00000100         xr
+infomemnobits    0x00000100         0x00000100         xr
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /usr/lib/gcc/msp430/4.5.3/crt0ivtbl16.o
+LOAD main.o
+LOAD ns430-uart.o
+LOAD msp4th.o
+LOAD /usr/lib/gcc/msp430/4.5.3/libgcc.a
+LOAD /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a
+LOAD /usr/lib/gcc/msp430/4.5.3/libgcc.a
+LOAD /usr/lib/gcc/msp430/4.5.3/libcrt0.a
+
+.hash
+ *(.hash)
+
+.dynsym
+ *(.dynsym)
+
+.dynstr
+ *(.dynstr)
+
+.gnu.version
+ *(.gnu.version)
+
+.gnu.version_d
+ *(.gnu.version_d)
+
+.gnu.version_r
+ *(.gnu.version_r)
+
+.rel.init
+ *(.rel.init)
+
+.rela.init
+ *(.rela.init)
+
+.rel.text
+ *(.rel.text)
+ *(.rel.text.*)
+ *(.rel.gnu.linkonce.t*)
+
+.rela.text
+ *(.rela.text)
+ *(.rela.text.*)
+ *(.rela.gnu.linkonce.t*)
+
+.rel.fini
+ *(.rel.fini)
+
+.rela.fini
+ *(.rela.fini)
+
+.rel.rodata
+ *(.rel.rodata)
+ *(.rel.rodata.*)
+ *(.rel.gnu.linkonce.r*)
+
+.rela.rodata
+ *(.rela.rodata)
+ *(.rela.rodata.*)
+ *(.rela.gnu.linkonce.r*)
+
+.rel.data
+ *(.rel.data)
+ *(.rel.data.*)
+ *(.rel.gnu.linkonce.d*)
+
+.rela.data
+ *(.rela.data)
+ *(.rela.data.*)
+ *(.rela.gnu.linkonce.d*)
+
+.rel.ctors
+ *(.rel.ctors)
+
+.rela.ctors
+ *(.rela.ctors)
+
+.rel.dtors
+ *(.rel.dtors)
+
+.rela.dtors
+ *(.rela.dtors)
+
+.rel.got
+ *(.rel.got)
+
+.rela.got
+ *(.rela.got)
+
+.rel.bss
+ *(.rel.bss)
+
+.rela.bss
+ *(.rela.bss)
+
+.rel.plt
+ *(.rel.plt)
+
+.rela.plt
+ *(.rela.plt)
+
+.text           0x00004000     0x11f0
+                0x00004000                . = ALIGN (0x2)
+ *(.init)
+ *(.init0)
+ *(.init1)
+ *(.init2)
+ *(.init3)
+ *(.init4)
+ *(.init5)
+ *(.init6)
+ *(.init7)
+ *(.init8)
+ *(.init9)
+ .init9         0x00004000      0x162 main.o
+                0x00004000                main
+                0x00004162                __ctors_start = .
+ *(.ctors)
+                0x00004162                __ctors_end = .
+                0x00004162                __dtors_start = .
+ *(.dtors)
+                0x00004162                __dtors_end = .
+                0x00004162                . = ALIGN (0x2)
+ *(.text)
+ .text          0x00004162        0x4 /usr/lib/gcc/msp430/4.5.3/crt0ivtbl16.o
+                0x00004162                __isr_14
+                0x00004162                __isr_4
+                0x00004162                __isr_11
+                0x00004162                __isr_5
+                0x00004162                __isr_2
+                0x00004162                __isr_10
+                0x00004162                __isr_7
+                0x00004162                __isr_0
+                0x00004162                __isr_8
+                0x00004162                __isr_3
+                0x00004162                __isr_12
+                0x00004162                __isr_13
+                0x00004162                __isr_9
+                0x00004162                __isr_6
+                0x00004162                __isr_1
+ .text          0x00004166       0xb2 main.o
+                0x00004166                _reset_vector__
+ .text          0x00004218       0x46 ns430-uart.o
+                0x00004218                uart_putchar
+                0x00004228                uart_getchar
+                0x00004234                uart_puts
+ .text          0x0000425e      0xe24 msp4th.o
+                0x0000425e                getKeyB
+                0x0000427c                getLine
+                0x0000433c                getWord
+                0x000043e0                listFunction
+                0x000043fa                popMathStack
+                0x00004438                pushMathStack
+                0x0000446c                popAddrStack
+                0x00004484                pushAddrStack
+                0x00004494                lookupToken
+                0x00004530                luFunc
+                0x00004584                numFunc
+                0x00004694                ifFunc
+                0x000046e8                pushnFunc
+                0x00004714                overFunc
+                0x0000471e                dfnFunc
+                0x00004764                printNumber
+                0x000047f8                printHexChar
+                0x00004810                printHexByte
+                0x00004830                printHexWord
+                0x00004854                execN
+                0x00004cb0                execFunc
+                0x00004d06                init_msp4th
+                0x00004db2                processLoop
+                0x00004e3e                cmdListBi
+                0x00004f49                cmdListBi2
+                0x00004f52                cmdList2N
+                0x00004f5a                progBi
+ .text          0x00005082        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+ .text          0x00005082        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+ .text          0x00005082        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+ .text          0x00005082      0x104 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+                0x00005082                memcpy
+ .text          0x00005186        0x0 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+                0x00005186                . = ALIGN (0x2)
+ *(.text.*)
+ .text.crt0     0x00005186        0x0 /usr/lib/gcc/msp430/4.5.3/crt0ivtbl16.o
+ .text.libgcc   0x00005186       0x16 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+                0x00005186                __mulhi3
+ .text.libgcc   0x0000519c       0x36 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+                0x0000519c                __divmodhi4
+ .text.libgcc   0x000051d2       0x1c /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+                0x000051d2                __udivmodhi4
+ .text.crt0     0x000051ee        0x2 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+                0x000051ee                _unexpected_
+                0x000051f0                . = ALIGN (0x2)
+ *(.fini9)
+ *(.fini8)
+ *(.fini7)
+ *(.fini6)
+ *(.fini5)
+ *(.fini4)
+ *(.fini3)
+ *(.fini2)
+ *(.fini1)
+ *(.fini0)
+ *(.fini)
+                0x000051f0                _etext = .
+
+.data           0x00004000        0x0 load address 0x000051f0
+                0x00004000                PROVIDE (__data_start, .)
+                0x00004000                . = ALIGN (0x2)
+ *(.data)
+ .data          0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/crt0ivtbl16.o
+ .data          0x00004000        0x0 main.o
+ .data          0x00004000        0x0 ns430-uart.o
+ .data          0x00004000        0x0 msp4th.o
+ .data          0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+ .data          0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+ .data          0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+ .data          0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+ .data          0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+                0x00004000                . = ALIGN (0x2)
+ *(.gnu.linkonce.d*)
+                0x00004000                . = ALIGN (0x2)
+                0x00004000                _edata = .
+                0x000051f0                PROVIDE (__data_load_start, LOADADDR (.data))
+                0x00000000                PROVIDE (__data_size, SIZEOF (.data))
+                0x000051f0                PROVIDE (__data_end, (LOADADDR (.data) + SIZEOF (.data)))
+
+.bootloader     0x00000800        0x0
+                0x00000800                PROVIDE (__boot_start, .)
+ *(.bootloader)
+                0x00000800                . = ALIGN (0x2)
+ *(.bootloader.*)
+
+.infomem        0x00000000        0x0
+ *(.infomem)
+                0x00000000                . = ALIGN (0x2)
+ *(.infomem.*)
+
+.infomemnobits  0x00000100        0x0
+ *(.infomemnobits)
+                0x00000100                . = ALIGN (0x2)
+ *(.infomemnobits.*)
+
+.bss            0x00004000      0x63a load address 0x000051f0
+                0x00004000                PROVIDE (__bss_start, .)
+ *(.bss)
+ .bss           0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/crt0ivtbl16.o
+ .bss           0x00004000        0x0 main.o
+ .bss           0x00004000        0x0 ns430-uart.o
+ .bss           0x00004000        0x0 msp4th.o
+ .bss           0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+ .bss           0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+ .bss           0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+ .bss           0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+ .bss           0x00004000        0x0 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+ *(COMMON)
+ COMMON         0x00004000      0x63a msp4th.o
+                0x00004000                buckets
+                0x00004208                lineBuffer
+                0x00004288                addrStack
+                0x00004308                addrStackPtr
+                0x0000430a                cmdListPtr
+                0x0000430c                progPtr
+                0x0000430e                wordBuffer
+                0x0000432e                prog
+                0x0000452e                fastTimer
+                0x00004530                dirMemory
+                0x00004532                mathStack
+                0x00004572                progOpsPtr
+                0x00004574                progOps
+                0x000045b4                slowTimer
+                0x000045b6                progCounter
+                0x000045b8                lineBufferPtr
+                0x000045ba                cmdList
+                0x0000463a                PROVIDE (__bss_end, .)
+                0x0000463a                _end = .
+                0x0000063a                PROVIDE (__bss_size, SIZEOF (.bss))
+
+.noinit         0x0000463a        0x0
+                0x0000463a                PROVIDE (__noinit_start, .)
+ *(.noinit)
+ *(COMMON)
+                0x0000463a                PROVIDE (__noinit_end, .)
+                0x0000463a                _end = .
+
+.vectors        0x0000ffe0       0x20
+                0x0000ffe0                PROVIDE (__vectors_start, .)
+ *(.vectors*)
+ .vectors       0x0000ffe0       0x20 /usr/lib/gcc/msp430/4.5.3/crt0ivtbl16.o
+                0x0000ffe0                __ivtbl_16
+                0x00010000                _vectors_end = .
+
+.profiler
+ *(.profiler)
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+.stab.excl
+ *(.stab.excl)
+
+.stab.exclstr
+ *(.stab.exclstr)
+
+.stab.index
+ *(.stab.index)
+
+.stab.indexstr
+ *(.stab.indexstr)
+
+.comment
+ *(.comment)
+
+.debug
+ *(.debug)
+
+.line
+ *(.line)
+
+.debug_srcinfo
+ *(.debug_srcinfo)
+
+.debug_sfnames
+ *(.debug_sfnames)
+
+.debug_aranges  0x00000000       0xa4
+ *(.debug_aranges)
+ .debug_aranges
+                0x00000000       0x18 main.o
+ .debug_aranges
+                0x00000018       0x14 ns430-uart.o
+ .debug_aranges
+                0x0000002c       0x14 msp4th.o
+ .debug_aranges
+                0x00000040       0x14 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+ .debug_aranges
+                0x00000054       0x14 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+ .debug_aranges
+                0x00000068       0x14 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+ .debug_aranges
+                0x0000007c       0x14 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+ .debug_aranges
+                0x00000090       0x14 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+
+.debug_pubnames
+                0x00000000      0x312
+ *(.debug_pubnames)
+ .debug_pubnames
+                0x00000000       0x2f main.o
+ .debug_pubnames
+                0x0000002f       0x42 ns430-uart.o
+ .debug_pubnames
+                0x00000071      0x284 msp4th.o
+ .debug_pubnames
+                0x000002f5       0x1d /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+
+.debug_info     0x00000000     0x1073
+ *(.debug_info)
+ .debug_info    0x00000000      0x21c main.o
+ .debug_info    0x0000021c      0x151 ns430-uart.o
+ .debug_info    0x0000036d      0x8cd msp4th.o
+ .debug_info    0x00000c3a       0xcf /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+ .debug_info    0x00000d09       0xcf /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+ .debug_info    0x00000dd8       0xcf /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+ .debug_info    0x00000ea7      0x113 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+ .debug_info    0x00000fba       0xb9 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+ *(.gnu.linkonce.wi.*)
+
+.debug_abbrev   0x00000000      0x485
+ *(.debug_abbrev)
+ .debug_abbrev  0x00000000      0x11c main.o
+ .debug_abbrev  0x0000011c       0xde ns430-uart.o
+ .debug_abbrev  0x000001fa      0x1a4 msp4th.o
+ .debug_abbrev  0x0000039e       0x14 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+ .debug_abbrev  0x000003b2       0x14 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+ .debug_abbrev  0x000003c6       0x14 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+ .debug_abbrev  0x000003da       0x97 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+ .debug_abbrev  0x00000471       0x14 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+
+.debug_line     0x00000000      0x7c7
+ *(.debug_line)
+ .debug_line    0x00000000       0xc9 main.o
+ .debug_line    0x000000c9       0x69 ns430-uart.o
+ .debug_line    0x00000132      0x349 msp4th.o
+ .debug_line    0x0000047b       0x98 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_mulhi3.o)
+ .debug_line    0x00000513       0xa5 /usr/lib/gcc/msp430/4.5.3/libgcc.a(_divmodhi4.o)
+ .debug_line    0x000005b8       0x9a /usr/lib/gcc/msp430/4.5.3/libgcc.a(_udivmodhi4.o)
+ .debug_line    0x00000652       0xf3 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+ .debug_line    0x00000745       0x82 /usr/lib/gcc/msp430/4.5.3/libcrt0.a(_unexpected_.o)
+
+.debug_frame    0x00000000      0x270
+ *(.debug_frame)
+ .debug_frame   0x00000000       0x2e main.o
+ .debug_frame   0x0000002e       0x40 ns430-uart.o
+ .debug_frame   0x0000006e      0x1d0 msp4th.o
+ .debug_frame   0x0000023e       0x32 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+
+.debug_str      0x00000000      0x39b
+ *(.debug_str)
+ .debug_str     0x00000000       0xd6 main.o
+                                0x125 (size before relaxing)
+ .debug_str     0x000000d6       0x51 ns430-uart.o
+                                 0xd3 (size before relaxing)
+ .debug_str     0x00000127      0x1da msp4th.o
+                                0x257 (size before relaxing)
+ .debug_str     0x00000301       0x9a /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+                                 0xed (size before relaxing)
+
+.debug_loc      0x00000000      0x823
+ *(.debug_loc)
+ .debug_loc     0x00000000       0x4b main.o
+ .debug_loc     0x0000004b       0x3e ns430-uart.o
+ .debug_loc     0x00000089      0x5c4 msp4th.o
+ .debug_loc     0x0000064d      0x1d6 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+
+.debug_macinfo
+ *(.debug_macinfo)
+                0x00007fdf                PROVIDE (__stack, ((ORIGIN (data) + 0x3fe0) - 0x1))
+                0x000051f0                PROVIDE (__data_start_rom, _etext)
+                0x000051f0                PROVIDE (__data_end_rom, (_etext + SIZEOF (.data)))
+                0x000051f0                PROVIDE (__noinit_start_rom, (_etext + SIZEOF (.data)))
+                0x000051f0                PROVIDE (__noinit_end_rom, ((_etext + SIZEOF (.data)) + SIZEOF (.noinit)))
+                0x00000000                PROVIDE (__subdevice_has_heap, 0x0)
+                0x00003000                __PC_AFTER_RESET = 0x3000
+                0x00000000                __CRCDI = 0x0
+                0x00000000                __CRCDI_L = 0x0
+                0x00000001                __CRCDI_H = 0x1
+                0x00000002                __CRCDIRB = 0x2
+                0x00000002                __CRCDIRB_L = 0x2
+                0x00000002                __CRCDIRB_H = 0x2
+                0x00000004                __CRCINIRES = 0x4
+                0x00000004                __CRCINIRES_L = 0x4
+                0x00000005                __CRCINIRES_H = 0x5
+                0x00000006                __CRCRESR = 0x6
+                0x00000006                __CRCRESR_L = 0x6
+                0x00000007                __CRCRESR_H = 0x7
+                0x00000130                __MPY = 0x130
+                0x00000132                __MPYS = 0x132
+                0x00000134                __MAC = 0x134
+                0x00000136                __MACS = 0x136
+                0x00000138                __OP2 = 0x138
+                0x0000013a                __RESLO = 0x13a
+                0x0000013c                __RESHI = 0x13c
+                0x0000013e                __SUMEXT = 0x13e
+                0x00000400                __AES_CR = 0x400
+                0x00000402                __AES_SR = 0x402
+                0x00000410                __AES_STATE = 0x410
+                0x00000010                __AES_STATE_SIZE = 0x10
+                0x00000700                __AES_KEY = 0x700
+                0x00000020                __AES_KEY_SIZE = 0x20
+                0x00000720                __AES_EXPKEY = 0x720
+                0x000000e0                __AES_EXPKEY_SIZE = 0xe0
+                0x00001a00                __PADSR = 0x1a00
+                0x00001a02                __PBDSR = 0x1a02
+                0x00001a04                __PAOEN = 0x1a04
+                0x00001a06                __PBOEN = 0x1a06
+                0x00001a08                __PAOUT = 0x1a08
+                0x00001a0a                __PBOUT = 0x1a0a
+                0x00001a0c                __PAPER = 0x1a0c
+                0x00001a0e                __PBPER = 0x1a0e
+                0x00001a10                __PAIER = 0x1a10
+                0x00001a12                __PBIER = 0x1a12
+                0x00001a14                __PAIMR = 0x1a14
+                0x00001a16                __PBIMR = 0x1a16
+                0x00001a18                __PAPUE = 0x1a18
+                0x00001a1a                __PBPUE = 0x1a1a
+                0x00001a1c                __PBTSD = 0x1a1c
+                0x00001a1e                __PBPSR = 0x1a1e
+                0x00001a20                __PAOCEN = 0x1a20
+                0x00001a22                __PBOCEN = 0x1a22
+                0x00001c00                __TMR0_CR = 0x1c00
+                0x00001c02                __TMR0_SR = 0x1c02
+                0x00001c04                __TMR0_CNT = 0x1c04
+                0x00001c06                __TMR0_RA = 0x1c06
+                0x00001c08                __TMR0_RB = 0x1c08
+                0x00001c0a                __TMR0_RC = 0x1c0a
+                0x00001c0c                __TMR0_CAP0 = 0x1c0c
+                0x00001c0e                __TMR0_CAP1 = 0x1c0e
+                0x00001c10                __TMR1_CR = 0x1c10
+                0x00001c12                __TMR1_SR = 0x1c12
+                0x00001c14                __TMR1_CNT = 0x1c14
+                0x00001c16                __TMR1_RA = 0x1c16
+                0x00001c18                __TMR1_RB = 0x1c18
+                0x00001c1a                __TMR1_RC = 0x1c1a
+                0x00001c1c                __TMR1_CAP0 = 0x1c1c
+                0x00001c1e                __TMR1_CAP1 = 0x1c1e
+                0x00001e00                __TMR2_CR = 0x1e00
+                0x00001e02                __TMR2_SR = 0x1e02
+                0x00001e04                __TMR2_CNT = 0x1e04
+                0x00001e06                __TMR2_RA = 0x1e06
+                0x00001e08                __TMR2_RB = 0x1e08
+                0x00001e0a                __TMR2_RC = 0x1e0a
+                0x00001e0c                __TMR2_CAP0 = 0x1e0c
+                0x00001e0e                __TMR2_CAP1 = 0x1e0e
+                0x00001e10                __TMR3_CR = 0x1e10
+                0x00001e12                __TMR3_SR = 0x1e12
+                0x00001e14                __TMR3_CNT = 0x1e14
+                0x00001e16                __TMR3_RA = 0x1e16
+                0x00001e18                __TMR3_RB = 0x1e18
+                0x00001e1a                __TMR3_RC = 0x1e1a
+                0x00001e1c                __TMR3_CAP0 = 0x1e1c
+                0x00001e1e                __TMR3_CAP1 = 0x1e1e
+                0x00002000                __SPI0_CR = 0x2000
+                0x00002002                __SPI0_RDR = 0x2002
+                0x00002004                __SPI0_TDR = 0x2004
+                0x00002006                __SPI0_SR = 0x2006
+                0x00002008                __SPI1_CR = 0x2008
+                0x0000200a                __SPI1_RDR = 0x200a
+                0x0000200c                __SPI1_TDR = 0x200c
+                0x0000200e                __SPI1_SR = 0x200e
+                0x00002200                __UART0_CR = 0x2200
+                0x00002202                __UART0_BCR = 0x2202
+                0x00002204                __UART0_SR = 0x2204
+                0x00002206                __UART0_RDR = 0x2206
+                0x00002208                __UART0_TDR = 0x2208
+                0x00002210                __UART1_CR = 0x2210
+                0x00002212                __UART1_BCR = 0x2212
+                0x00002214                __UART1_SR = 0x2214
+                0x00002216                __UART1_RDR = 0x2216
+                0x00002218                __UART1_TDR = 0x2218
+                0x00002400                __ADC_CR = 0x2400
+                0x00002402                __GPIN0 = 0x2402
+                0x00002404                __GPIN1 = 0x2404
+                0x00002406                __GPOUT0 = 0x2406
+                0x00002408                __GPOUT1 = 0x2408
+                0x0000240a                __GPOUT2 = 0x240a
+                0x0000240c                __GPOUT3 = 0x240c
+                0x00002a00                __I2CM_CR = 0x2a00
+                0x00002a02                __I2CM_TCFG = 0x2a02
+                0x00002a04                __I2CM_SR = 0x2a04
+                0x00002a06                __I2CM_WCR = 0x2a06
+                0x00002a08                __I2CM_TDR_ST = 0x2a08
+                0x00002a0a                __I2CM_TDR = 0x2a0a
+                0x00002a0c                __I2CM_TDR_SP = 0x2a0c
+                0x00002a0e                __I2CM_RDR = 0x2a0e
+                0x00002a10                __I2CS_CR = 0x2a10
+                0x00002a12                __I2CS_SR = 0x2a12
+                0x00002a14                __I2CS_TDR = 0x2a14
+                0x00002a16                __I2CS_RDR = 0x2a16
+                0x00003000                __ROMStart = 0x3000
+                0x00000800                __ROMSize = 0x800
+                0x00004000                __RAMStart = 0x4000
+                0x0000c000                __RAMSize = 0xc000
+OUTPUT(main.elf elf32-msp430)
+
+.debug_pubtypes
+                0x00000000       0xd3
+ .debug_pubtypes
+                0x00000000       0x37 main.o
+ .debug_pubtypes
+                0x00000037       0x35 ns430-uart.o
+ .debug_pubtypes
+                0x0000006c       0x41 msp4th.o
+ .debug_pubtypes
+                0x000000ad       0x26 /usr/lib/gcc/msp430/4.5.3/../../../../msp430/lib/libc.a(memcpy.o)
+
+.debug_ranges   0x00000000        0xc
+ .debug_ranges  0x00000000        0xc main.o
