@@ -381,8 +381,8 @@ void getWord(void)
 
     wordBuffer[0] = 0;
 
-    uart_putchar('.');
-    uart_putchar('.');
+    /*uart_putchar('.');*/
+    /*uart_putchar('.');*/
 
     /*while (wordBuffer[0] == 0) {*/
     waiting = 1;
@@ -392,6 +392,7 @@ void getWord(void)
 
         while ((c <= ' ') && (c != 0)) {
             c = getKeyB();    /* strip leading spaces */
+            uart_putchar('a');
             /*uart_putchar(c);*/
         }
 
@@ -409,8 +410,9 @@ void getWord(void)
                 /*}*/
             /*} else {*/
                 while (c > ' ') {
+                    uart_putchar('b');
                     wordBuffer[k++] = c;
-                    uart_putchar(c);
+                    /*uart_putchar(c);*/
                     c = getKeyB();
                 }
             /*}*/
@@ -418,6 +420,7 @@ void getWord(void)
             wordBuffer[k] = 0;
             waiting = 0;
         } else {
+            uart_putchar('c');
             wordBuffer[0] = 0;
             getLine();
         }
@@ -438,14 +441,14 @@ int16_t popMathStack(void)
 
     k = 1;
     j = mathStack[0];
-    uart_putchar('1');
-    uart_putchar('2');
+    /*uart_putchar('1');*/
+    /*uart_putchar('2');*/
 
     for (i=1;i<MATH_STACK_SIZE;i++) {
-    uart_putchar('s');
+    /*uart_putchar('s');*/
         mathStack[i-1] = mathStack[i];
     }
-    uart_putchar('3');
+    /*uart_putchar('3');*/
     k = 0;
     return(j);
 }
@@ -454,8 +457,8 @@ void pushMathStack(int16_t n)
 {
     volatile uint16_t i;
     volatile uint16_t tmp;
-    printNumber(n);
-    uart_puts((str_t *)"<-- push math");
+    /*printNumber(n);*/
+    /*uart_puts((str_t *)"<-- push math");*/
     for (i=MATH_STACK_SIZE - 2; i > 0; i--) {
         tmp = i - 1;
         mathStack[i] = mathStack[tmp];
@@ -556,7 +559,7 @@ void numFunc()
     volatile int16_t j;
     volatile int16_t n;
 
-    uart_puts((str_t *)"in numFunc()");
+    /*uart_puts((str_t *)"in numFunc()");*/
 
     // first check for neg sign
     i = 0;
@@ -564,15 +567,15 @@ void numFunc()
         i = i + 1;
     }
 
-    uart_puts((str_t *)"there");
+    /*uart_puts((str_t *)"there");*/
 
     if ((wordBuffer[i] >= '0') && (wordBuffer[i] <= '9')) {
-        uart_puts((str_t *)"num");
+        /*uart_puts((str_t *)"num");*/
         // it is a number 
         j = 1;
         // check if hex
         if(wordBuffer[0] == '0' && wordBuffer[1] == 'x'){
-            uart_puts((str_t *)"hex");
+            /*uart_puts((str_t *)"hex");*/
             // base 16 number ... just assume all characters are good
             i = 2;
             n = 0;
@@ -585,7 +588,7 @@ void numFunc()
                 i = i + 1;
             }
         } else {
-            uart_puts((str_t *)"dec");
+            /*uart_puts((str_t *)"dec");*/
             // base 10 number
             n = 0;
             while(wordBuffer[i]){
@@ -598,16 +601,16 @@ void numFunc()
             }
         }
     } else {
-        uart_puts((str_t *)"not number");
+        /*uart_puts((str_t *)"not number");*/
         n = 0;
         j = 0;
     }
 
-    uart_putchar('.');
+    /*uart_putchar('.');*/
     pushMathStack(n);
-    uart_putchar('.');
+    /*uart_putchar('.');*/
     pushMathStack(j);
-    uart_putchar('.');
+    /*uart_putchar('.');*/
 }
 
 void ifFunc(int16_t x){     // used as goto if x == 1
@@ -615,7 +618,7 @@ void ifFunc(int16_t x){     // used as goto if x == 1
     volatile uint16_t tmp;
     volatile int16_t i;
 
-    uart_puts((str_t *)"in ifFunc");
+    /*uart_puts((str_t *)"in ifFunc");*/
 
     if(progCounter > 9999){
         tmp = progCounter - 10000;
@@ -624,28 +627,28 @@ void ifFunc(int16_t x){     // used as goto if x == 1
         addr = prog[progCounter];
     }
 
-    printNumber(addr);
-    uart_puts((str_t *)"<-- addr");
+    /*printNumber(addr);*/
+    /*uart_puts((str_t *)"<-- addr");*/
 
     progCounter = progCounter + 1;
-    uart_putchar('.');
+    /*uart_putchar('.');*/
     if(x == 1){
         // this is a goto
-        uart_putchar('g');
+        /*uart_putchar('g');*/
         progCounter = addr;
         /*uart_puts((str_t *)"goto");*/
     } else {
         // this is the "if" processing
-        uart_putchar('i');
+        /*uart_putchar('i');*/
         i = popMathStack();
         /*uart_putchar('a');*/
         /*printNumber((int16_t)addr);*/
         if(i == 0){
             progCounter = addr;
         }
-        uart_puts((str_t *)"<-- if");
+        /*uart_puts((str_t *)"<-- if");*/
     }
-    uart_putchar('.');
+    /*uart_putchar('.');*/
 }
 
 void pushnFunc(){
@@ -768,11 +771,13 @@ void execFunc(){
 
 void execN(int16_t n){
   volatile int16_t i,j,k,m;
-  int32_t x,y,z;
-  uart_puts((str_t *)"execN: ");
-  printNumber(n);
-  uart_puts((str_t *)"");
+  int16_t x,y,z;
+  /*uart_puts((str_t *)"execN: ");*/
+  /*printNumber(n);*/
+  /*uart_puts((str_t *)"");*/
   switch(n){
+    case 0:
+      break;
     case 1:
   //    xit = 1;
       break;
@@ -896,11 +901,11 @@ void execN(int16_t n){
       ifFunc(0);
       break;
 
-//    case 23: // then      ( trapped in ':')
-//      break;
+    case 23: // then      ( trapped in ':')
+      break;
 
-//    case 24: // else      ( trapped in ':')
-//      break;
+    case 24: // else      ( trapped in ':')
+      break;
 
     case 25:  // begin
       pushAddrStack(progCounter);
@@ -925,9 +930,11 @@ void execN(int16_t n){
       printHexWord(popMathStack());
       break;
 
+    case 29:
+      break;
 
     case 30:  // num
-      uart_puts((str_t *)"in case 30");
+      /*uart_puts((str_t *)"in case 30");*/
       numFunc();
       break;
 
@@ -1147,7 +1154,7 @@ void execN(int16_t n){
       break;
 
     default:
-      uart_puts((str_t *)"opcode ");      
+      /*uart_puts((str_t *)"opcode ");      */
       break;
   }
 }

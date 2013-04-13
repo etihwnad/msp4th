@@ -120,6 +120,7 @@ SECTIONS
   }  > data
    PROVIDE (__data_load_start = LOADADDR(.data) );
    PROVIDE (__data_size = SIZEOF(.data) );
+   PROVIDE (__data_end = LOADADDR(.data) + SIZEOF(.data) );
   /* Bootloader.  */
   .bootloader   :
   {
