@@ -12,7 +12,7 @@ int16_t popMathStack(void);
 void pushMathStack(int16_t n);
 int16_t popAddrStack(void);
 void pushAddrStack(int16_t n);
-int16_t lookupToken(uint8_t *x, uint8_t *l);
+int16_t lookupToken(volatile uint8_t *x, volatile uint8_t *l);
 void luFunc(void);
 void numFunc(void);
 void ifFunc(int16_t x);

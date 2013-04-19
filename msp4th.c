@@ -45,7 +45,7 @@ int16_t popMathStack(void);
 void pushMathStack(int16_t n);
 int16_t popAddrStack(void);
 void pushAddrStack(int16_t n);
-int16_t lookupToken(uint8_t *x, uint8_t *l);
+int16_t lookupToken(volatile uint8_t *x, volatile uint8_t *l);
 void luFunc(void);
 void numFunc(void);
 void ifFunc(int16_t x);
@@ -65,56 +65,55 @@ void execFunc(void);
 // must end in a space !!!!
 // The order is important .... don't insert anything!
 // the order matches the execN function
-
 const uint8_t cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
               "> = .hb gw dfn "                     // 11 -> 15
               "keyt , p@ p! not "                   // 16 -> 20
               "list if then else begin "            // 21 -> 25
-              "until clrb .h ] num "                // 26 -> 30
+              "until eram .h ] num "                // 26 -> 30
               "push0 goto exec lu pushn "           // 31 -> 35
               "over push1 pwrd emit ; "             // 36 -> 40
               "@ ! h@ do loop "                     // 41 -> 45
               "i b@ a! and or "                     // 46 -> 50
-              "*/ key cr hist histclr "             // 51 -> 55
-              "fasttimer slowtimer stat hstat fec " // 56 -> 60
-              "fecset fecbset fecbclr "             // 61 -> 65
-              };
+              "*/ key cr "                          // 51 -> 53
+             };
+
+//              "*/ key cr hist histclr "             // 51 -> 55
+//              "fasttimer slowtimer stat hstat fec " // 56 -> 60
+//              "fecset fecbset fecbclr "             // 61 -> 65
+//              };
+
+#define LAST_PREDEFINED 53	// update this when we add commands to the built in list
+
 
 // these commands are interps
-
 const uint8_t cmdListBi2[] = {"[ : var "};
 
 // these values point to where in progBi[] these routines start
-
 const int16_t cmdList2N[] = {0,10000,10032,10135};  // need an extra zero at the front
 
-#define LAST_PREDEFINED 40	// update this when we add commands to the built in list
 
 int16_t ALIGN_2 mathStack[MATH_STACK_SIZE];
 
 int16_t ALIGN_2 addrStack[ADDR_STACK_SIZE];
 volatile uint16_t addrStackPtr;
 
-int16_t ALIGN_2 prog[PROG_SPACE];  // user programs are placed here
+volatile int16_t ALIGN_2 prog[PROG_SPACE];  // user programs are placed here
 volatile uint16_t progPtr;           // next open space for user opcodes
-int16_t ALIGN_2 progOps[USR_OPCODE_SIZE];
+volatile int16_t ALIGN_2 progOps[USR_OPCODE_SIZE];
 volatile uint16_t progOpsPtr;
-uint8_t ALIGN_2 cmdList[CMD_LIST_SIZE];  // just a string of user defined names
+volatile uint8_t ALIGN_2 cmdList[CMD_LIST_SIZE];  // just a string of user defined names
 volatile uint16_t cmdListPtr;
 
-int16_t fastTimer;
-int16_t slowTimer;
 
-int16_t *dirMemory;
+volatile int16_t *dirMemory;
 
-uint16_t buckets[260];  // use buckets[256] for total
 
 
 // to flag the initial built in functions from the rest, save the negative of them in the program space (prog).
 
-const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
+static const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
 
    // this is the monitor in compiled forth code (by hand)
 
@@ -311,12 +310,25 @@ const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
          
 volatile uint16_t progCounter;
 
-uint8_t lineBuffer[LINE_SIZE];      /* input line buffer */
+volatile uint8_t lineBuffer[LINE_SIZE];      /* input line buffer */
 
 volatile uint16_t lineBufferPtr;                 /* input line buffer pointer */
-// uint8_t xit;                    /* set to 1 to kill program */
+int16_t xit;                    /* set to 1 to kill program */
 
-uint8_t wordBuffer[WORD_SIZE];		// just get a word
+volatile uint8_t wordBuffer[WORD_SIZE];		// just get a word
+
+
+
+static int16_t __inline__ RAMerrors(void){
+    int16_t errors;
+#if defined(MSP430)
+    __asm__ __volatile__ ( "mov r9, %0\n" : [res] "=r" (errors));
+#else
+    errors = 0;
+#endif
+    return errors;
+}
+
 
 
 uint8_t getKeyB(){
@@ -373,66 +385,47 @@ void getLine()
 }
 
 
+
 void getWord(void)
 {
+    volatile int16_t i;
     volatile uint16_t k;
     volatile uint8_t c;
-    volatile uint16_t waiting;
+    volatile int16_t waiting;
 
-    wordBuffer[0] = 0;
+    for (i=0; i < WORD_SIZE; i++) {
+        wordBuffer[i] = 0;
+    }
 
-    /*uart_putchar('.');*/
-    /*uart_putchar('.');*/
-
-    /*while (wordBuffer[0] == 0) {*/
     waiting = 1;
-    while (waiting) {
-        k = 0;
+    k = 0;
+    while (1) {
         c = getKeyB();
 
-        while ((c <= ' ') && (c != 0)) {
-            c = getKeyB();    /* strip leading spaces */
-            uart_putchar('a');
-            /*uart_putchar(c);*/
-        }
-
-        if (c > 0) {
-            /*if (0 && (c == '"')) {*/
-                /*c = getKeyB();*/
-                /*uart_putchar(c);*/
-
-                /*while ((c != '"') && (c != 0)) {*/
-                    /*if (c != '"') {*/
-                        /*wordBuffer[k++] = c;*/
-                    /*}*/
-                    /*c = getKeyB();*/
-                    /*uart_putchar(c);*/
-                /*}*/
-            /*} else {*/
-                while (c > ' ') {
-                    uart_putchar('b');
-                    wordBuffer[k++] = c;
-                    /*uart_putchar(c);*/
-                    c = getKeyB();
-                }
-            /*}*/
-
-            wordBuffer[k] = 0;
-            waiting = 0;
-        } else {
-            uart_putchar('c');
-            wordBuffer[0] = 0;
+        if (c == 0) {
             getLine();
+        } else if (c > ' ') {
+            break;
         }
+    }
+
+    wordBuffer[k++] = c;
+    c = getKeyB();
+    while (c > ' ') {
+        wordBuffer[k++] = c;
+        c = getKeyB();
     }
 }
 
-void inline listFunction()
+
+
+void listFunction()
 {
     uart_puts((str_t *)cmdListBi);
     uart_puts((str_t *)cmdListBi2);
     uart_puts((str_t *)cmdList);
 }
+
   
 int16_t popMathStack(void)
 {
@@ -441,14 +434,14 @@ int16_t popMathStack(void)
 
     k = 1;
     j = mathStack[0];
-    /*uart_putchar('1');*/
-    /*uart_putchar('2');*/
+    //uart_putchar('1');
+    //uart_putchar('2');
 
     for (i=1;i<MATH_STACK_SIZE;i++) {
-    /*uart_putchar('s');*/
+    //uart_putchar('s');
         mathStack[i-1] = mathStack[i];
     }
-    /*uart_putchar('3');*/
+    //uart_putchar('3');
     k = 0;
     return(j);
 }
@@ -480,7 +473,7 @@ void pushAddrStack(int16_t n)
     addrStack[addrStackPtr] = n;
 }
 
-int16_t lookupToken(uint8_t *x, uint8_t *l){    // looking for x in l
+int16_t lookupToken(volatile uint8_t *x, volatile uint8_t *l){    // looking for x in l
   int16_t i,j,k,n;
   j = 0;
   k = 0;
@@ -528,7 +521,7 @@ int16_t lookupToken(uint8_t *x, uint8_t *l){    // looking for x in l
 void luFunc(){
   int16_t i;
   
-  i = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
+  i = lookupToken(wordBuffer, (volatile uint8_t *)cmdListBi);
   
   if(i){
     i += 20000;
@@ -536,7 +529,7 @@ void luFunc(){
     pushMathStack(1);
   } else {
     // need to test internal interp commands
-    i = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
+    i = lookupToken(wordBuffer, (volatile uint8_t *)cmdListBi2);
     if(i){
       i += 10000;
       pushMathStack(i);
@@ -776,10 +769,11 @@ void execN(int16_t n){
   /*printNumber(n);*/
   /*uart_puts((str_t *)"");*/
   switch(n){
-    case 0:
+    case 0: // unused
       break;
-    case 1:
-  //    xit = 1;
+
+    case 1: // exit
+      xit = 1;
       break;
     case 2:
       // +
@@ -801,16 +795,16 @@ void execN(int16_t n){
       mathStack[1] = mathStack[1] / mathStack[0];
       popMathStack();
       break;
-    case 6:
-      // .
+
+    case 6: // .
       printNumber(popMathStack());
       break;
-    case 7:
-      // dup
+
+    case 7: // dup
       pushMathStack(mathStack[0]);
       break;
-    case 8:
-      // drop
+
+    case 8: // drop
       i = popMathStack();
       break;
     case 9:
@@ -819,8 +813,8 @@ void execN(int16_t n){
       mathStack[0] = mathStack[1];
       mathStack[1] = i;
       break;
-    case 10:
-      // <
+
+    case 10: // <
       i = popMathStack();
       if(mathStack[0] < i){
         mathStack[0] = 1;
@@ -828,8 +822,8 @@ void execN(int16_t n){
         mathStack[0] = 0;
       }
       break;      
-    case 11:
-      // >
+
+    case 11: // >
       i = popMathStack();
       if(mathStack[0] > i){
         mathStack[0] = 1;
@@ -847,15 +841,15 @@ void execN(int16_t n){
       }
       break;      
 
-    case 13:
+    case 13: // .hb
       printHexByte(popMathStack());
       break;
 
-    case 14:
+    case 14: // gw
       getWord();
       break;
 
-    case 15:
+    case 15: // dfn
       dfnFunc();
       break;
 
@@ -879,7 +873,7 @@ void execN(int16_t n){
       mathStack[0] = prog[i];
       break;
 
-    case 19:  // !
+    case 19: // !
       i = popMathStack();
       j = popMathStack();
       prog[i] = j;
@@ -907,11 +901,11 @@ void execN(int16_t n){
     case 24: // else      ( trapped in ':')
       break;
 
-    case 25:  // begin
+    case 25: // begin
       pushAddrStack(progCounter);
       break;
 
-    case 26:  // until
+    case 26: // until
       i = popAddrStack();
       j = popMathStack();
       if(j == 0){
@@ -920,29 +914,27 @@ void execN(int16_t n){
       }
       break;    
 
-    case 27:  // clrb   clear a/d converter buckets
-      for(i=0;i<256;i++){
-        buckets[i] = 0;
-      }
+    case 27: // eram  ( -- nRAMerrors )
+      pushMathStack(RAMerrors());
       break;
       
-    case 28:  // .h
+    case 28: // .h
       printHexWord(popMathStack());
       break;
 
-    case 29:
+    case 29: // ] ( trapped in interp )
       break;
 
-    case 30:  // num
+    case 30: // num
       /*uart_puts((str_t *)"in case 30");*/
       numFunc();
       break;
 
-    case 31:  // push0
+    case 31: // push0
       pushMathStack(0);
       break;
 
-    case 32:  // goto   ( for internal use only )
+    case 32: // goto   ( for internal use only )
       ifFunc(1);
       break;
 
@@ -962,12 +954,12 @@ void execN(int16_t n){
       overFunc();
       break;
 
-    case 37:  // push1
+    case 37: // push1
       pushMathStack(1);
       break;
 
     case 38: // pwrd
-      uart_puts(wordBuffer);
+      uart_puts((str_t *)wordBuffer);
       break;
 
     case 39: // emit
@@ -1030,8 +1022,10 @@ void execN(int16_t n){
       break;
 
     case 47: // b@
+      /* disabled
       i = mathStack[0];
       mathStack[0] = buckets[i];
+      */
       break;
       
     case 48: // a!
@@ -1067,92 +1061,6 @@ void execN(int16_t n){
       uart_putchar(0x0A);
       break;
 
-    case 54: // hist
-      i = mathStack[0];
-      mathStack[0] = buckets[i];
-      break;
-      
-    case 55: // histclr
-      for(i=0;i<260;i++){
-        buckets[i] = 0;
-      }
-      break;
-
-    case 56: // fasttimer
-      i = (int16_t )fastTimer;
-      i = i>>1;
-      pushMathStack(i);
-      break;
-
-    case 57:  // slowtimer
-      i = (int16_t )slowTimer;
-      i = i>>1;
-      pushMathStack(i);
-      break;
-
-    case 58: // hstat
-      for(i=256;i<260;i++){
-        printHexWord(buckets[i]);
-        uart_putchar(' ');
-      }
-      break;
-
-    case 59:
-      for(i=0;i<256;i++){
-        if(buckets[i]){
-          printHexByte(i);
-          uart_putchar(' ');
-          printHexWord(buckets[i]);
-          uart_putchar(0x0D);
-          uart_putchar(0x0A);
-        }
-      }
-      break;
-
-    case 60: // fec
-      /*
-      printHexWord(fecShadow[2]);
-      uart_putchar(' ');
-      printHexWord(fecShadow[1]);
-      uart_putchar(' ');
-      printHexWord(fecShadow[0]);
-      */
-      break;      
-
-    case 61: // fecset
-      /*
-      fecShadow[0] = popMathStack();   // lsb
-      fecShadow[1] = popMathStack();
-      fecShadow[2] = popMathStack();   //msb
-      */
-      /*sendToFEC(fecShadow);*/
-      break;
-
-    case 62: // fecbset
-      /*
-      i = popMathStack();
-      if(i < 48 && i >= 0){
-        j = i >> 4;  // find the byte
-        i = i & 0x0F; // find the bit
-        i = 1 << i;   // get the bit location
-        fecShadow[j] |= i;
-      }
-      */
-      /*sendToFEC(fecShadow);*/
-      break;
-
-    case 63: // fecbclr
-      /*
-      i = popMathStack();
-      if(i < 48 && i >= 0){
-        j = i >> 4;  // find the byte
-        i = i & 0x0F; // find the bit
-        i = 1 << i;   // get the bit location
-        fecShadow[j] &= ~i;
-      }
-      */
-      break;
-
     default:
       /*uart_puts((str_t *)"opcode ");      */
       break;
@@ -1160,26 +1068,18 @@ void execN(int16_t n){
 }
 
 
-#if defined(MSP430)
-static int16_t __inline__ RAMerrors(void){
-    int16_t errors;
-    __asm__ __volatile__ ( "mov r9, %0\n" : [res] "=r" (errors));
-    return errors;
-}
-#endif
 
 
 void init_msp4th(void)
 {
     volatile uint16_t i;
 
-#if defined(MSP430)
     printNumber(RAMerrors());
     uart_puts((uint8_t *)"<-- RAM errors");
-#endif
 
 
-//  xit = 0;
+    xit = 0;
+
     addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
     progCounter = 10000;
     progPtr = 1;			// this will be the first opcode
@@ -1209,11 +1109,11 @@ void processLoop() // this processes the forth opcodes.
     volatile uint16_t opcode;
     volatile uint16_t tmp;
 
-    while(1){
-        uart_puts((str_t *)"processLoop()");
+    while(xit == 0){
+        //uart_puts((str_t *)"processLoop()");
 
-        printNumber(progCounter);
-        uart_puts((str_t *)"<-- progCounter");
+        //printNumber(progCounter);
+        //uart_puts((str_t *)"<-- progCounter");
 
         if(progCounter > 9999){
             tmp = progCounter - 10000;
@@ -1222,8 +1122,8 @@ void processLoop() // this processes the forth opcodes.
             opcode = prog[progCounter];
         }
 
-        printNumber(opcode);
-        uart_puts((str_t *)"<-- opcode");
+        //printNumber(opcode);
+        //uart_puts((str_t *)"<-- opcode");
 
         progCounter = progCounter + 1;
 
