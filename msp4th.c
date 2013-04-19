@@ -113,7 +113,7 @@ volatile int16_t *dirMemory;
 
 // to flag the initial built in functions from the rest, save the negative of them in the program space (prog).
 
-static const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
+const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
 
    // this is the monitor in compiled forth code (by hand)
 
