@@ -20,6 +20,7 @@
  *      YE BE WARNED
  */
 void __attribute__ ((naked)) _reset_vector__(void) {
+  __asm__ __volatile__("mov #0xffb0,r1"::);
   __asm__ __volatile__("br #main"::);
 }
 
@@ -54,6 +55,7 @@ static void __inline__ eint(void){
 
 
 
+
 int main(void){
 
     int16_t tmp;
@@ -67,7 +69,7 @@ int main(void){
     PAOUT = 0x0000;
     PAOEN = 0x0010;  // set data direction registers
 
-    UART0_BCR = BCR(DEVBOARD_CLOCK, BAUDRATE);
+    UART0_BCR = UART_BCR(DEVBOARD_CLOCK, BAUDRATE);
     UART0_CR = UARTEn;
 
     // a read clears the register -- ready for TX/RX
@@ -79,8 +81,10 @@ int main(void){
      *
      * word "exit" makes processLoop() return
      */
-    init_msp4th();
-    processLoop();
+    while (1) {
+        init_msp4th();
+        processLoop();
+    }
 
     return 0;
 }

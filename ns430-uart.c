@@ -6,7 +6,7 @@
 
 void uart_putchar(uint8_t c)
 {
-    while ((UART0_SR & (TDRE | TXEMPTY)) == 0) {
+    while ((UART0_SR & (UART_TDRE | UART_TXEMPTY)) == 0) {
         // wait for register to clear
     }
     UART0_TDR = (c & 0xff);
@@ -16,7 +16,7 @@ uint8_t uart_getchar(void)
 {
     uint8_t c;
 
-    while ((UART0_SR & RDRF) == 0) {
+    while ((UART0_SR & UART_RDRF) == 0) {
         // wait for char
     }
     c = (UART0_RDR & 0x00ff);
