@@ -12,8 +12,8 @@ SHELL = /bin/bash
 
 TARGET     = main
 #MCU        = msp430f5529
-#MCU        = msp1
-MCU        = msp430x2013
+MCU        = msp2
+#MCU        = msp430x2013
 # List all the source files here
 # eg if you have a source file foo.c then list it here
 SOURCES = main.c ns430-uart.c msp4th.c

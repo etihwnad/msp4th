@@ -333,18 +333,22 @@ static int16_t __inline__ RAMerrors(void){
 
 
 uint8_t getKeyB(){
-  uint8_t c;
-  c = lineBuffer[lineBufferPtr];
-  if (c != 0) {
-      lineBufferPtr = lineBufferPtr + 1;
-  }
-  return(c);
+    uint8_t c;
+
+    c = lineBuffer[lineBufferPtr++];
+    if (c == 0) {
+        getLine();
+        c = lineBuffer[lineBufferPtr++];
+    }
+
+    return (c);
 }
+
 
 
 void getLine()
 {
-    uint16_t waiting;
+    int16_t waiting;
     uint8_t c;
 
     lineBufferPtr = 0;
@@ -357,28 +361,23 @@ void getLine()
     while (waiting) {  // just hang in loop until we get CR
         c = uart_getchar();
 
-        if (c == '\b') {
-            if (lineBufferPtr > 0) {
-                uart_putchar('\b');
-                uart_putchar(' ');
-                uart_putchar('\b');
-                lineBufferPtr--;
-            }
+        if ((c == '\b') && (lineBufferPtr > 0)) {
+            uart_putchar('\b');
+            uart_putchar(' ');
+            uart_putchar('\b');
+            lineBufferPtr--;
+        } else if ( ((c == 255) || (c == '')) && (lineBufferPtr == 0)) {
+            xit = 1;
+            waiting = 0;
         } else {
             uart_putchar(c);
-            if ((c == '\r') || (c == '\n')) {
-                // hit cr
-                lineBuffer[lineBufferPtr] = 0;
+            if ( (c == '\r') ||
+                 (c == '\n') ||
+                 (lineBufferPtr >= (LINE_SIZE - 1))) { // prevent overflow of line buffer
                 waiting = 0;
-            } else {
-
-                lineBuffer[lineBufferPtr++] = c;
-                lineBuffer[lineBufferPtr] = 0;
-
-                if(lineBufferPtr >= 127) {  // prevent overflow of line buffer
-                    waiting = 0;
-                }
             }
+            lineBuffer[lineBufferPtr++] = c;
+            lineBuffer[lineBufferPtr] = 0;
         }
     }
     uart_putchar('\n');
@@ -387,33 +386,71 @@ void getLine()
 
 
 
-void getWord(void)
+uint8_t nextPrintableChar(void)
 {
-    int16_t i;
-    uint16_t k;
     uint8_t c;
-    int16_t waiting;
 
-    for (i=0; i < WORD_SIZE; i++) {
-        wordBuffer[i] = 0;
+    c = getKeyB();
+    while (c <= ' ') {
+        c = getKeyB();
     }
 
-    waiting = 1;
-    k = 0;
-    while (1) {
-        c = getKeyB();
+    return (c);
+}
 
-        if (c == 0) {
-            getLine();
-        } else if (c > ' ') {
-            break;
+
+uint8_t skipStackComment(void)
+{
+    uint8_t c;
+
+    c = getKeyB();
+    while (c != ')') {
+        c = getKeyB();
+    }
+
+    c = nextPrintableChar();
+
+    return (c);
+}
+
+
+void getWord(void)
+{
+    int16_t k;
+    uint8_t c;
+
+
+    for (k=0; k < WORD_SIZE; k++) {
+        wordBuffer[k] = 0;
+    }
+
+    c = nextPrintableChar();
+
+    // comments
+    while ((c == '(') || (c == 92)) {
+        switch (c) {
+            // '(' + anything + ')'
+            case '(':
+                c = skipStackComment();
+                break;
+            // '\' backslash -- to end of line
+            case 92:
+                getLine();
+                c = nextPrintableChar();
+                break;
+            default:
+                break;
         }
     }
 
+    k = 0;
     wordBuffer[k++] = c;
+    wordBuffer[k] = 0;
+
     c = getKeyB();
     while (c > ' ') {
         wordBuffer[k++] = c;
+        wordBuffer[k] = 0;
         c = getKeyB();
     }
 }
@@ -430,28 +467,24 @@ void listFunction()
   
 int16_t popMathStack(void)
 {
-    uint16_t i;
-    int16_t j,k;
+    int16_t i;
+    int16_t j;
 
-    k = 1;
     j = mathStack[0];
 
     for (i=1;i<MATH_STACK_SIZE;i++) {
         mathStack[i-1] = mathStack[i];
     }
 
-    k = 0;
     return(j);
 }
 
 void pushMathStack(int16_t n)
 {
-    uint16_t i;
-    uint16_t tmp;
+    int16_t i;
 
     for (i=MATH_STACK_SIZE - 2; i > 0; i--) {
-        tmp = i - 1;
-        mathStack[i] = mathStack[tmp];
+        mathStack[i] = mathStack[i-1];
     }
     mathStack[0] = n;
 }
@@ -460,13 +493,13 @@ int16_t popAddrStack(void)
 {
     int16_t j;
     j = addrStack[addrStackPtr];
-    addrStackPtr = addrStackPtr + 1;
+    addrStackPtr++;
     return(j);
 }
 
 void pushAddrStack(int16_t n)
 {
-    addrStackPtr = addrStackPtr - 1;
+    addrStackPtr--;
     addrStack[addrStackPtr] = n;
 }
 
@@ -821,7 +854,7 @@ void execN(int16_t n){
       prog[progPtr] = popMathStack();
       progPtr = progPtr + 1;
       if(progPtr >= PROG_SPACE){
-        uart_puts((str_t *)"prog mem");
+        uart_puts((str_t *)"ERR: prog full");
       }
       break;
 
