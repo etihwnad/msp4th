@@ -110,7 +110,7 @@ flash: $(TARGET).hex
 .PHONY:       clean
 clean:
 	$(RM) $(OBJECTS)
-	$(RM) $(TARGET).{elf,hex,txt,map}
+	$(RM) $(TARGET).{elf,hex,txt,map,xout}
 	$(RM) $(SOURCES:.c=.lst)
 	$(RM) $(DEPEND)
 
