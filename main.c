@@ -56,75 +56,42 @@ static void __inline__ eint(void){
 
 
 
+/*
+ * SPECIAL BOOTLOADER CALLING
+ *
+ * We *do not* want to 'call' the initial bootloader.  Such a call instruction
+ * attempts to use the stack, which is in RAM -- whose health is unknown.  The
+ * functionality must use ROM code and registers only.  * Declaring as an
+ * inline function and .include'ing the ASM code is a hop and skip to ensure
+ * this happens.
+ *
+ * As a consequence, the ASM file must use local labels only -- of the form
+ *  N:
+ *      mov foo, bar
+ *
+ *  where N is an integer, referenced as
+ *
+ *      jmp Nb
+ *
+ *  where the label is searched for forwards or backwards according to the
+ *  suffix Nf or Nb.
+ */
+void __inline__ flashbootASM(void)
+{
+    asm(".include \"flashboot.s\"");
+}
+
+
 
 int main(void){
 
     int16_t tmp;
 
-    register int16_t data asm("r5");
-    register int16_t *addr asm("r7");
+    //register int16_t data asm("r5");
+    //register int16_t *addr asm("r7");
 
+    flashbootASM();
     dint();
-
-
-    PAOUT = 0x0001;
-    PAOEN = 0x0001;
-    PAPER = 0x000e;
-
-
-    // check pin state
-    if ((PADSR & (1 << 7)) == 0) {
-        // msp4th interp
-    } else {
-        // load flash image into RAM
-
-        // setup SPI mode 3, 8b transfers
-        SPI0_CR = (SPI_CPHA | SPI_CPOL | SPI_EN);
-
-        // /CS, pin[0] low
-        PAOUT &= ~(1 << 0);
-
-        // release flash from deep sleep
-        SPI0_TDR = 0xab00;
-        while ((SPI0_SR & TDRE) == 0) { /* wait */ }
-
-        // change to 16-bit transfers
-        SPI0_CR = (SPI_DL | SPI_CPHA | SPI_CPOL | SPI_EN);
-
-        // /CS high
-        PAOUT |= (1 << 0);
-
-        // /CS low
-        PAOUT &= ~(1 << 0);
-        // send flash command
-        // 0x03 - read data bytes
-        // 0x00 - address MSB
-        SPI0_TDR = 0x0300;
-        SPI0_TDR = RAMStart;
-        while ((SPI0_SR & TDRE) == 0) { /* wait */ }
-
-        SPI0_TDR = 0x0000;
-        while ((SPI0_SR & TDRE) == 0) { /* wait */ }
-
-        SPI0_TDR = 0x0000;
-        while ((SPI0_SR & TDRE) == 0) { /* wait */ }
-
-        // clear status
-        SPI0_SR = 0;
-
-        for (addr=RAMStart; addr <= RAMStart+RAMSize-2; addr++) {
-            while ((SPI0_SR & TDRE) == 0) { /* wait */ }
-
-            // store data
-            data = SPI0_RDR;
-            // keep receiving (by sending zeros)
-            SPI0_TDR = 0x0000;
-
-            addr = data;
-        }
-    }
-
-
 
     // chip setup for UART0 use
     PAPER = 0x0030;
