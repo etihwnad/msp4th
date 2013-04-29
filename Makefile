@@ -10,13 +10,15 @@
 # 
 SHELL = /bin/bash
 
-TARGET     = main
-#MCU        = msp430f5529
-#MCU        = msp1
-MCU        = msp430x2013
+TARGET  = main
+#MCU     = msp430f5529
+MCU     = msp2
+#MCU     = msp430x2013
+CPU	= 430x
 # List all the source files here
 # eg if you have a source file foo.c then list it here
 SOURCES = main.c ns430-uart.c msp4th.c
+#ASMS = flashboot.s
 #SOURCES = main.c ns430-uart.c
 # Include are located in the Include directory
 #INCLUDES = -IInclude
@@ -26,7 +28,8 @@ INCLUDES = -I.
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
 #CFLAGS   = -mmcu=$(MCU) -Werror -Wall -Wunused -mendup-at=main $(INCLUDES)
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
-CFLAGS   = -mmcu=$(MCU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
+#CFLAGS   = -mmcu=$(MCU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
+CFLAGS   = -mcpu=$(CPU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
 #ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 #ASFLAGS  = -mmcu=$(MCU) -Wall -Wunused -mendup-at=main $(INCLUDES)
 ASFLAGS  = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)
@@ -52,7 +55,7 @@ MV       = mv
 DEPEND = $(SOURCES:.c=.d)
 
 # all the object files
-OBJECTS = $(SOURCES:.c=.o)
+OBJECTS = $(SOURCES:.c=.o) $(ASMS:.s=.o)
 
 # all asm files
 ASSEMBLYS = $(SOURCES:.c=.lst)
@@ -61,6 +64,14 @@ ASSEMBLYS = $(SOURCES:.c=.lst)
 all: $(TARGET).elf $(TARGET).hex $(TARGET).xout $(ASSEMBLYS)
 
 $(TARGET).elf: $(OBJECTS)
+	@echo "Linking $@"
+	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
+	@echo
+	@echo ">>>> Size of Firmware <<<<"
+	$(SIZE) $(TARGET).elf
+	@echo
+
+%.elf: %.o
 	@echo "Linking $@"
 	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
 	@echo
@@ -80,7 +91,11 @@ $(TARGET).elf: $(OBJECTS)
 	$(MAKETXT) -O $@ -TITXT $< -I
 	unix2dos $(TARGET).txt
 #  The above line is required for the DOS based TI BSL tool to be able to read the txt file generated from linux/unix systems.
-#
+
+%.o: %.s
+	@#msp430-gcc -mcpu=430x -D_GNU_ASSEMBLER_ -x assembler-with-cpp -c $< -o $@
+	msp430-gcc -mcpu=430x -D_GNU_ASSEMBLER_ -c $< -o $@
+
 %.o: %.c
 	@echo "Compiling $<"
 	$(CC) -c $(CFLAGS) -o $@ $<
@@ -110,7 +125,7 @@ flash: $(TARGET).hex
 .PHONY:       clean
 clean:
 	$(RM) $(OBJECTS)
-	$(RM) $(TARGET).{elf,hex,txt,map}
+	$(RM) $(TARGET).{elf,hex,txt,map,xout}
 	$(RM) $(SOURCES:.c=.lst)
 	$(RM) $(DEPEND)
 
