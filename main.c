@@ -56,41 +56,33 @@ static void __inline__ eint(void){
 
 
 
-/*
- * SPECIAL BOOTLOADER CALLING
- *
- * We *do not* want to 'call' the initial bootloader.  Such a call instruction
- * attempts to use the stack, which is in RAM -- whose health is unknown.  The
- * functionality must use ROM code and registers only.  * Declaring as an
- * inline function and .include'ing the ASM code is a hop and skip to ensure
- * this happens.
- *
- * As a consequence, the ASM file must use local labels only -- of the form
- *  N:
- *      mov foo, bar
- *
- *  where N is an integer, referenced as
- *
- *      jmp Nb
- *
- *  where the label is searched for forwards or backwards according to the
- *  suffix Nf or Nb.
- */
-void __inline__ flashbootASM(void)
-{
-    asm(".include \"flashboot.s\"");
-}
-
 
 
 int main(void){
+    /*
+     * SPECIAL BOOTLOADER CALLING
+     *
+     * We *do not* want to 'call' the initial bootloader.  Such a call instruction
+     * attempts to use the stack, which is in RAM -- whose health is unknown.  The
+     * functionality must use ROM code and registers only.  * Declaring as an
+     * inline function and .include'ing the ASM code is a hop and skip to ensure
+     * this happens.
+     *
+     * As a consequence, the ASM file must use local labels only -- of the form
+     *  N:
+     *      mov foo, bar
+     *
+     *  where N is an integer, referenced as
+     *
+     *      jmp Nb
+     *
+     *  where the label is searched for forwards or backwards according to the
+     *  suffix Nf or Nb.
+     */
+    asm(".include \"flashboot.s\"");
 
     int16_t tmp;
 
-    //register int16_t data asm("r5");
-    //register int16_t *addr asm("r7");
-
-    flashbootASM();
     dint();
 
     // chip setup for UART0 use
