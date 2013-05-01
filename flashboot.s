@@ -8,11 +8,15 @@
 
 
 
-;.global FlashLoadStart
-;FlashLoadStart:
-;setup stack pointer to end of RAM
-    mov     #-80,r1 ;#0xffb0
+; setup stack pointer to end of RAM
+; not used in this asm code, but arguably necessary for proper init of the C
+; environment later
+    mov     #0xffb0,r1
 
+
+
+; NOTE: we wakeup the flash chip (M25PE80) now to ensure we allow the
+;       requisite 30us for wakeup from deep sleep into idle/active mode.
 ;set PA(0) = 0 and enable output
 ;(should be) wired to flash /CS pin
     mov     #1,     &PAOUT
@@ -35,22 +39,22 @@
 ;release flash from deep sleep
     mov     #0xab00,&SPI0_TDR       ;#0xab00
 ; wait until command done sending
+1:
     bit     #1,     &SPI0_SR        ;r3 As==01
-    jz      $-4             ;abs 0x30ea
+    jz      1b
 ;now use 16-bit transfers
     mov     #0x00f0,&SPI0_CR        ;#0x00f0
 ;de-select flash /CS
     bis     #1,     &PAOUT  ;r3 As==01
 
+
 ;check RAM for errors
-;writes error count to 0x263e
-;address is not present in fabbed mmap
 ; r9 is not modified later in bootcode
 ;  (to read count later in early user code)
 ;  all function calls push/pop r9
 ;  user code may initially read r9 to get the RAM error count
     clr     r9              
-    mov     #-21846,r5      ;#0xaaaa
+    mov     #0xaaaa,r5      ;#0xaaaa
     mov     #16384, r7      ;#RAMStart
     mov     #24576, r8      ;#0x6000
     dec     r8              
@@ -80,7 +84,6 @@
     jmp     $-70            ;abs 0x3054
     mov     #-1,    r5      ;r3 As==11
     jmp     $-74            ;abs 0x3054
-    mov     r9,     &0x263e 
 
 ;check state of PA(7)
 ; PA.7 low -> invoke bootstrap loader
