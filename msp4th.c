@@ -617,6 +617,11 @@ void numFunc()
                 n = n + wordBuffer[i] - '0';
                 if(wordBuffer[i] > '9'){
                     n = n - 7;
+
+                    // compensate for lowercase digits
+                    if (wordBuffer[i] >= 'a') {
+                        n -= 0x20;
+                    }
                 }
                 i = i + 1;
             }
