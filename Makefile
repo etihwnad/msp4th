@@ -16,6 +16,7 @@ MCU     = msp2
 #MCU     = msp430x2013
 CPU	= 430x
 MPY     = 16se
+IVCNT   = 32
 # List all the source files here
 # eg if you have a source file foo.c then list it here
 SOURCES = main.c ns430-uart.c msp4th.c
@@ -30,13 +31,13 @@ INCLUDES = -I.
 #CFLAGS   = -mmcu=$(MCU) -Werror -Wall -Wunused -mendup-at=main $(INCLUDES)
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
-CFLAGS   = -mcpu=$(CPU) -mmpy=$(MPY) -g -Os -Werror -Wall -Wunused $(INCLUDES)
+CFLAGS   = -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -g -Os -Werror -Wall -Wunused $(INCLUDES)
 #ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 #ASFLAGS  = -mmcu=$(MCU) -Wall -Wunused -mendup-at=main $(INCLUDES)
 #ASFLAGS  = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)
-ASFLAGS  = -mcpu=$(CPU) -mmpy=$(MPY) -g -Os -Wall -Wunused $(INCLUDES)
+ASFLAGS  = -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -g -Os -Wall -Wunused $(INCLUDES)
 #LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map -T ldscript_ns430
-LDFLAGS  = -mcpu=$(CPU) -mmpy=$(MPY) -Wl,-Map=$(TARGET).map -T ldscript_ns430
+LDFLAGS  = -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -Wl,-Map=$(TARGET).map -T ldscript_ns430
 ########################################################################################
 CC       = msp430-gcc
 LD       = msp430-ld

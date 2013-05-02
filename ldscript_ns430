@@ -9,7 +9,7 @@ MEMORY {
   ram (wx)         : ORIGIN = 0x4000, LENGTH = 0x3fe0
   /*rom (rx)         : ORIGIN = 0xf800, LENGTH = 2048-32*/
 
-  vectors          : ORIGIN = 0xffe0, LENGTH = 64
+  vectors          : ORIGIN = 0xffc0, LENGTH = 64
 
   /* Remaining banks are absent */
   bsl              : ORIGIN = 0x0000, LENGTH = 0x0000
