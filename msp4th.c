@@ -1,3 +1,11 @@
+/*
+ *
+ * TODO:
+ *  - use enum for VM opcodes
+ *  - speed up pop/pushMathStack (need bounds check??)
+ *
+ */
+
 
 #if defined(MSP430)
 /* use devboard uart */
@@ -95,6 +103,7 @@ const int16_t cmdList2N[] = {0,10000,10032,10135};  // need an extra zero at the
 
 
 int16_t ALIGN_2 mathStack[MATH_STACK_SIZE];
+int16_t mathStackDepth;
 
 int16_t ALIGN_2 addrStack[ADDR_STACK_SIZE];
 uint16_t addrStackPtr;
@@ -472,8 +481,12 @@ int16_t popMathStack(void)
 
     j = mathStack[0];
 
-    for (i=1;i<MATH_STACK_SIZE;i++) {
+    for (i=1; i < mathStackDepth; i++) {
         mathStack[i-1] = mathStack[i];
+    }
+
+    if (mathStackDepth > 0) {
+        mathStackDepth--;
     }
 
     return(j);
@@ -483,9 +496,12 @@ void pushMathStack(int16_t n)
 {
     int16_t i;
 
-    for (i=MATH_STACK_SIZE - 2; i > 0; i--) {
+    mathStackDepth++;
+
+    for (i=mathStackDepth; i > 0; i--) {
         mathStack[i] = mathStack[i-1];
     }
+
     mathStack[0] = n;
 }
 
@@ -1064,6 +1080,7 @@ void init_msp4th(void)
 
     xit = 0;
 
+    mathStackDepth = 0;
     addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
     progCounter = 10000;
     progPtr = 1;			// this will be the first opcode
