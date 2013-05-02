@@ -84,7 +84,9 @@ const uint8_t cmdListBi[] =
               "over push1 pwrd emit ; "             // 36 -> 40
               "@ ! h@ do loop "                     // 41 -> 45
               "i b@ a! and or "                     // 46 -> 50
-              "*/ key cr "                          // 51 -> 53
+              "*/ key cr ~ xor "                    // 51 -> 55
+              "*2 /2 call0 call1 call2 "            // 56 -> 60
+              "call3 call4 ndrop "                  // 61 -> 63
              };
 
 //              "*/ key cr hist histclr "             // 51 -> 55
@@ -92,7 +94,7 @@ const uint8_t cmdListBi[] =
 //              "fecset fecbset fecbclr "             // 61 -> 65
 //              };
 
-#define LAST_PREDEFINED 53	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 63	// update this when we add commands to the built in list
 
 
 // these commands are interps
@@ -474,6 +476,25 @@ void listFunction()
 }
 
   
+void ndropFunc(void)
+{
+    int16_t i;
+    int16_t n;
+
+    n = mathStack[0] + 1; // drop the *drop count* also
+
+    for (i=n; i < mathStackDepth; i++) {
+        mathStack[i-n] = mathStack[i];
+    }
+
+    if (mathStackDepth < n) {
+        mathStackDepth = 0;
+    } else {
+        mathStackDepth -= n;
+    }
+}
+
+
 int16_t popMathStack(void)
 {
     int16_t i;
@@ -775,11 +796,11 @@ void execFunc(){
 }
 
 
-void execN(int16_t n){
-  int16_t i,j,k,m;
+void execN(int16_t opcode){
+  int16_t i,j,k,m,n;
   int16_t x,y,z;
 
-  switch(n){
+  switch(opcode){
     case 0: // unused
       break;
 
@@ -1065,6 +1086,69 @@ void execN(int16_t n){
     case 53: // cr
       uart_putchar(0x0D);
       uart_putchar(0x0A);
+      break;
+
+    case 54: // ~ (bitwise complement)
+      mathStack[0] = ~mathStack[0];
+      break;
+
+    case 55: // xor
+      mathStack[1] ^= mathStack[0];
+      popMathStack();
+      break;
+
+    case 56: // *2
+      mathStack[0] <<= 1;
+      break;
+
+    case 57: // /2
+      mathStack[0] >>= 1;
+      break;
+
+    case 58: // call0  ( &func -- *func() )
+      i = mathStack[0];
+      mathStack[0] = (*(int16_t(*)(void)) i) ();
+      break;
+
+    case 59: // call1  ( a &func -- *func(a) )
+      i = mathStack[0];
+      j = mathStack[1];
+      mathStack[1] = (*(int16_t(*)(int16_t)) i) (j);
+      popMathStack();
+      break;
+
+    case 60: // call2  ( a b &func -- *func(a,b) )
+      i = mathStack[0];
+      j = mathStack[1];
+      k = mathStack[2];
+      mathStack[2] = (*(int16_t(*)(int16_t, int16_t)) i) (k, j);
+      mathStack[0] = 1;
+      ndropFunc();
+      break;
+
+    case 61: // call3  ( a b c &func -- *func(a,b,c) )
+      i = mathStack[0];
+      j = mathStack[1];
+      k = mathStack[2];
+      m = mathStack[3];
+      mathStack[3] = (*(int16_t(*)(int16_t, int16_t, int16_t)) i) (m, k, j);
+      mathStack[0] = 2;
+      ndropFunc();
+      break;
+
+    case 62: // call4  ( a b c d &func -- *func(a,b,c,d) )
+      i = mathStack[0];
+      j = mathStack[1];
+      k = mathStack[2];
+      m = mathStack[3];
+      n = mathStack[4];
+      mathStack[4] = (*(int16_t(*)(int16_t, int16_t, int16_t, int16_t)) i) (n, m, k, j);
+      mathStack[0] = 3;
+      ndropFunc();
+      break;
+
+    case 63: // ndrop  ( (x)*n n -- )  drop n math stack cells
+      ndropFunc();
       break;
 
     default:
