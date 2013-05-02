@@ -76,25 +76,19 @@ void execFunc(void);
 const uint8_t cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
-              "> = .hb gw dfn "                     // 11 -> 15
+              "> == .hb gw dfn "                    // 11 -> 15
               "keyt , p@ p! not "                   // 16 -> 20
               "list if then else begin "            // 21 -> 25
               "until eram .h ] num "                // 26 -> 30
               "push0 goto exec lu pushn "           // 31 -> 35
               "over push1 pwrd emit ; "             // 36 -> 40
               "@ ! h@ do loop "                     // 41 -> 45
-              "i b@ a! and or "                     // 46 -> 50
-              "*/ key cr ~ xor "                    // 51 -> 55
-              "*2 /2 call0 call1 call2 "            // 56 -> 60
-              "call3 call4 ndrop "                  // 61 -> 63
+              "i ~ ^ & | "                          // 46 -> 50
+              "*/ key cr *2 /2 "                    // 51 -> 55
+              "call0 call1 call2 call3 call4 "      // 56 -> 60
+              "ndrop "                              // 61 -> 61
              };
-
-//              "*/ key cr hist histclr "             // 51 -> 55
-//              "fasttimer slowtimer stat hstat fec " // 56 -> 60
-//              "fecset fecbset fecbclr "             // 61 -> 65
-//              };
-
-#define LAST_PREDEFINED 63	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 61	// update this when we add commands to the built in list
 
 
 // these commands are interps
@@ -331,7 +325,7 @@ uint8_t wordBuffer[WORD_SIZE];		// just get a word
 
 
 
-static int16_t __inline__ RAMerrors(void){
+static int16_t RAMerrors(void){
     int16_t errors;
 #if defined(MSP430)
     __asm__ __volatile__ ( "mov r9, %0\n" : [res] "=r" (errors));
@@ -437,18 +431,18 @@ void getWord(void)
 
     c = nextPrintableChar();
 
-    // comments
+    // ignore comments
     while ((c == '(') || (c == 92)) {
         switch (c) {
-            // '(' + anything + ')'
-            case '(':
+            case '(': // '(' + anything + ')'
                 c = skipStackComment();
                 break;
-            // '\' backslash -- to end of line
-            case 92:
+
+            case 92: // '\' backslash -- to end of line
                 getLine();
                 c = nextPrintableChar();
                 break;
+
             default:
                 break;
         }
@@ -679,7 +673,8 @@ void ifFunc(int16_t x){     // used as goto if x == 1
         addr = prog[progCounter];
     }
 
-    progCounter = progCounter + 1;
+    progCounter++;
+
     if(x == 1){
         // this is a goto
         progCounter = addr;
@@ -732,6 +727,7 @@ void printNumber(register int16_t n)
     int16_t rem;
     uint8_t x[7];
 
+    /* TODO BUG: cannot handle minimum signed integer 0x8000 -> -32768 */
     if (n < 0) {
         uart_putchar('-');
         n = -n;
@@ -798,55 +794,72 @@ void execFunc(){
 
 void execN(int16_t opcode){
   int16_t i,j,k,m,n;
-  int16_t x,y,z;
+  int32_t x;
 
   switch(opcode){
-    case 0: // unused
+    case  0: // unused
       break;
 
-    case 1: // exit
+    case  1: // exit
       xit = 1;
       break;
 
-    case 2: // +
+    case  2: // +  ( a b -- a+b )
       mathStack[1] += mathStack[0];
       popMathStack();
       break;
 
-    case 3: // -
+    case  3: // -  ( a b -- a-b )
       mathStack[1] += -mathStack[0];
       popMathStack();
       break;
 
-    case 4: // *
+      /*
+    case  4: // *  ( a b -- a*b )
       mathStack[1] = mathStack[0] * mathStack[1];
       popMathStack();
       break;
+      */
 
-    case 5: // /
+    case  4: // *  ( a b -- reshi reslo )
+#if defined(MSP430)
+      asm("dint");
+      MPYS = mathStack[1];
+      OP2 = mathStack[0];
+      mathStack[1] = RESHI;
+      mathStack[0] = RESLO;
+      asm("eint");
+#else
+      x = mathStack[0] * mathStack[1];
+      mathStack[1] = (int16_t)((x >> 16) & 0xffff);
+      mathStack[0] = (int16_t)(x & 0xffff);
+#endif
+      break;
+
+    case  5: // /  ( a b -- a/b )
       mathStack[1] = mathStack[1] / mathStack[0];
       popMathStack();
       break;
 
-    case 6: // .
+    case  6: // .  ( a -- )
       printNumber(popMathStack());
       break;
 
-    case 7: // dup
+    case  7: // dup  ( a -- a a )
       pushMathStack(mathStack[0]);
       break;
 
-    case 8: // drop
+    case  8: // drop  ( a -- )
       i = popMathStack();
       break;
 
-    case 9: // swap
+    case  9: // swap  ( a b -- b a )
       i = mathStack[0];
       mathStack[0] = mathStack[1];
       mathStack[1] = i;
       break;
 
-    case 10: // <
+    case 10: // <  ( a b -- a<b )
       i = popMathStack();
       if(mathStack[0] < i){
         mathStack[0] = 1;
@@ -855,7 +868,7 @@ void execN(int16_t opcode){
       }
       break;      
 
-    case 11: // >
+    case 11: // >  ( a b -- a>b )
       i = popMathStack();
       if(mathStack[0] > i){
         mathStack[0] = 1;
@@ -864,7 +877,7 @@ void execN(int16_t opcode){
       }
       break;      
 
-    case 12: // =
+    case 12: // ==  ( a b -- a==b )
       i = popMathStack();
       if(i == mathStack[0]){
         mathStack[0] = 1;
@@ -873,45 +886,45 @@ void execN(int16_t opcode){
       }
       break;      
 
-    case 13: // .hb
+    case 13: // .hb  ( a -- )
       printHexByte(popMathStack());
       break;
 
-    case 14: // gw
+    case 14: // gw  ( -- ) \ get word from input
       getWord();
       break;
 
-    case 15: // dfn
+    case 15: // dfn  ( -- ) \ create opcode and store word to cmdList
       dfnFunc();
       break;
 
-    case 16: // keyt
-     // return a 1 if keys are in ring buffer
-     //i = (inputRingPtrXin - inputRingPtrXout) & 0x0F;    // logical result assigned to i
-     i = 0;
-     pushMathStack(i);
-     break;
+    case 16: // keyt  ( -- flag )
+      // TODO: for interrupt-based UART I/O
+      // return a 1 if keys are in ring buffer
+      //i = (inputRingPtrXin - inputRingPtrXout) & 0x0F;    // logical result assigned to i
+      i = 0;
+      pushMathStack(i);
+      break;
 
-    case 17: // allot
-      prog[progPtr] = popMathStack();
-      progPtr = progPtr + 1;
+    case 17: // allot  ( opcode -- ) \ push opcode to prog space
+      prog[progPtr++] = popMathStack();
       if(progPtr >= PROG_SPACE){
         uart_puts((str_t *)"ERR: prog full");
       }
       break;
 
-    case 18:  // p@
+    case 18: // p@  ( opaddr -- opcode )
       i = mathStack[0];
       mathStack[0] = prog[i];
       break;
 
-    case 19: // p!
+    case 19: // p!  ( opcode opaddr -- )
       i = popMathStack();
       j = popMathStack();
       prog[i] = j;
       break;
 
-    case 20: // not
+    case 20: // not  ( a -- !a ) \ logical not
       if(mathStack[0]){
         mathStack[0] = 0;
       } else {
@@ -919,11 +932,11 @@ void execN(int16_t opcode){
       }
       break;
 
-    case 21: // list
+    case 21: // list  ( -- ) \ show defined words
       listFunction();
       break;
 
-    case 22: // if
+    case 22: // if  ( flag -- )
       ifFunc(0);
       break;
 
@@ -933,11 +946,11 @@ void execN(int16_t opcode){
     case 24: // else      ( trapped in ':')
       break;
 
-    case 25: // begin
+    case 25: // begin  ( -- ) ( -a- pcnt )
       pushAddrStack(progCounter);
       break;
 
-    case 26: // until
+    case 26: // until  ( flag -- ) ( addr -a- )
       i = popAddrStack();
       j = popMathStack();
       if(j == 0){
@@ -950,18 +963,18 @@ void execN(int16_t opcode){
       pushMathStack(RAMerrors());
       break;
       
-    case 28: // .h
+    case 28: // .h  ( a -- )
       printHexWord(popMathStack());
       break;
 
     case 29: // ] ( trapped in interp )
       break;
 
-    case 30: // num
+    case 30: // num  ( -- n flag ) \ is word in buffer a number?
       numFunc();
       break;
 
-    case 31: // push0
+    case 31: // push0  ( -- 0 )
       pushMathStack(0);
       break;
 
@@ -969,11 +982,11 @@ void execN(int16_t opcode){
       ifFunc(1);
       break;
 
-    case 33: // exec
+    case 33: // exec  ( opcode -- )
       execFunc();
       break;
 
-    case 34: // lu
+    case 34: // lu  ( -- opcode 1 | 0 )
       luFunc();
       break;
 
@@ -981,46 +994,44 @@ void execN(int16_t opcode){
       pushnFunc();
       break;
 
-    case 36: // over
+    case 36: // over  ( a b -- a b a )
       overFunc();
       break;
 
-    case 37: // push1
+    case 37: // push1  ( -- 1 )
       pushMathStack(1);
       break;
 
-    case 38: // pwrd
+    case 38: // pwrd  ( -- ) \ print word buffer
       uart_puts((str_t *)wordBuffer);
       break;
 
-    case 39: // emit
+    case 39: // emit  ( c -- )
       uart_putchar(popMathStack());
       break;
 
-    case 40: // ;
+    case 40: // ;  ( pcnt -a- )
       i = progCounter;
       progCounter = popAddrStack();
       break;
 
-    case 41: // @ read directly from memory address
-      i = popMathStack();
-      i = i >> 1;  // divide by to   
-      j = dirMemory[i];
-      pushMathStack(j);
+    case 41: // @  ( addr -- val ) \ read directly from memory address
+      i = mathStack[0] >> 1;
+      mathStack[0] = dirMemory[i];
       break;
       
-    case 42: // ! write directly to memory address words only!
+    case 42: // !  ( val addr -- ) \ write directly to memory address words only!
       i = popMathStack();  //  address to write to
       i = i >> 1;
       j = popMathStack();  //  value to write
       dirMemory[i] = j;
       break;
 
-    case 43: // h@
+    case 43: // h@  ( -- prog ) \ end of program code space
       pushMathStack(progPtr);
       break;
 
-    case 44: // do
+    case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
       i = popMathStack();  // start of count
       j = popMathStack();  // end count
       k = progCounter;
@@ -1030,7 +1041,7 @@ void execN(int16_t opcode){
       pushAddrStack(k);  // address to remember for looping
       break;
 
-    case 45: // loop
+    case 45: // loop  ( -- ) ( limit cnt pcnt -a- | limit cnt+1 pcnt )
       j = popAddrStack();  // loop address
       k = popAddrStack();  // count
       m = popAddrStack();  // limit
@@ -1047,77 +1058,81 @@ void execN(int16_t opcode){
       }
       break;
       
-    case 46: // i
+    case 46: // i  ( -- cnt ) \ loop counter value
       j = addrStack[addrStackPtr+1];
       pushMathStack(j);
       break;
 
-    case 47: // b@
-      break;
-      
-    case 48: // a!
-      i = popMathStack();  // address
-      j = popMathStack();  // value
-      /*setDAC(i,j);*/
-      break;
-
-    case 49: // and
-      mathStack[1] &= mathStack[0];
-      popMathStack();
-      break;
-
-    case 50: // or
-      mathStack[1] |= mathStack[0];
-      popMathStack();
-      break;
-
-    case 51: // */    scale function
-      x = popMathStack();
-      y = popMathStack();
-      z = mathStack[0];
-      z = (z*y)/x;
-      mathStack[0] = z;
-      break;
-      
-    case 52: // key     get a key from input .... (wait for it)
-      pushMathStack(uart_getchar());
-      break;
-
-    case 53: // cr
-      uart_putchar(0x0D);
-      uart_putchar(0x0A);
-      break;
-
-    case 54: // ~ (bitwise complement)
+    case 47: // ~  ( a -- ~a ) \ bitwise complement
       mathStack[0] = ~mathStack[0];
       break;
 
-    case 55: // xor
+    case 48: // ^  ( a b -- a^b ) \ bitwise xor
       mathStack[1] ^= mathStack[0];
       popMathStack();
       break;
 
-    case 56: // *2
+    case 49: // &  ( a b -- a&b ) \ bitwise and
+      mathStack[1] &= mathStack[0];
+      popMathStack();
+      break;
+
+    case 50: // |  ( a b -- a|b ) \bitwise or
+      mathStack[1] |= mathStack[0];
+      popMathStack();
+      break;
+
+    case 51: // */  ( a b c -- reshi reslo ) \ (a*b)/c scale function
+#if defined(MSP430)
+      asm("dint");
+      MPYS = popMathStack();
+      OP2 = mathStack[1];
+      x = (int32_t)(((int32_t)RESHI << 16) | RESLO);
+      x = (int32_t)(x / mathStack[0]);
+      mathStack[1] = (int16_t)((x >> 16) & 0xffff);
+      mathStack[0] = (int16_t)(x & 0xffff);
+      asm("eint");
+#else
+      i = popMathStack();
+      j = mathStack[0];
+      k = mathStack[1];
+      x = (int32_t)(j * k);
+      x = (int32_t)(x / i);
+      mathStack[1] = (int16_t)((x >> 16) & 0xffff);
+      mathStack[0] = (int16_t)(x & 0xffff);
+#endif
+      break;
+      
+    case 52: // key  ( -- c ) \ get a key from input .... (wait for it)
+      pushMathStack(uart_getchar());
+      break;
+
+    case 53: // cr  ( -- )
+      uart_putchar(0x0D);
+      uart_putchar(0x0A);
+      break;
+
+    case 54: // *2  ( a -- a<<1 )
       mathStack[0] <<= 1;
       break;
 
-    case 57: // /2
+    case 55: // /2  ( a -- a>>1 )
       mathStack[0] >>= 1;
       break;
 
-    case 58: // call0  ( &func -- *func() )
+    case 56: // call0  ( &func -- *func() )
       i = mathStack[0];
       mathStack[0] = (*(int16_t(*)(void)) i) ();
       break;
 
-    case 59: // call1  ( a &func -- *func(a) )
+    case 57: // call1  ( a &func -- *func(a) )
       i = mathStack[0];
       j = mathStack[1];
       mathStack[1] = (*(int16_t(*)(int16_t)) i) (j);
       popMathStack();
       break;
 
-    case 60: // call2  ( a b &func -- *func(a,b) )
+    case 58: // call2  ( a b &func -- *func(a,b) )
       i = mathStack[0];
       j = mathStack[1];
       k = mathStack[2];
@@ -1126,7 +1141,7 @@ void execN(int16_t opcode){
       ndropFunc();
       break;
 
-    case 61: // call3  ( a b c &func -- *func(a,b,c) )
+    case 59: // call3  ( a b c &func -- *func(a,b,c) )
       i = mathStack[0];
       j = mathStack[1];
       k = mathStack[2];
@@ -1136,7 +1151,7 @@ void execN(int16_t opcode){
       ndropFunc();
       break;
 
-    case 62: // call4  ( a b c d &func -- *func(a,b,c,d) )
+    case 60: // call4  ( a b c d &func -- *func(a,b,c,d) )
       i = mathStack[0];
       j = mathStack[1];
       k = mathStack[2];
@@ -1147,7 +1162,7 @@ void execN(int16_t opcode){
       ndropFunc();
       break;
 
-    case 63: // ndrop  ( (x)*n n -- )  drop n math stack cells
+    case 61: // ndrop  ( (x)*n n -- )  drop n math stack cells
       ndropFunc();
       break;
 
