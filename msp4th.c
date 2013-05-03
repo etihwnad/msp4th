@@ -723,23 +723,25 @@ void dfnFunc(){
 
 void printNumber(register int16_t n)
 {
-    uint16_t i;
+    uint16_t nu;
+    int16_t i;
     int16_t rem;
     uint8_t x[7];
 
-    /* TODO BUG: cannot handle minimum signed integer 0x8000 -> -32768 */
     if (n < 0) {
         uart_putchar('-');
-        n = -n;
+        nu = -n;
+    } else {
+        nu = n;
     }
 
     i = 0;
     do {
-        rem = n % 10;
+        rem = nu % 10;
         x[i] = (uint8_t)rem + (uint8_t)'0';
-        n = n / 10;
+        nu = nu / 10;
         i = i + 1;
-    } while((n != 0) && (i < 7));
+    } while((nu != 0) && (i < 7));
 
     do{
         i = i - 1;
