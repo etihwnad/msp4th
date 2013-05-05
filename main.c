@@ -21,7 +21,7 @@
  *      YE BE WARNED
  */
 void __attribute__ ((naked)) _reset_vector__(void) {
-  __asm__ __volatile__("mov #0xffb0,r1"::);
+  __asm__ __volatile__("mov #0xff00,r1"::);
   __asm__ __volatile__("br #main"::);
 }
 
@@ -85,6 +85,7 @@ int main(void){
 
     dint();
 
+
     // chip setup for UART0 use
     PAPER = 0x0030;
     PAOUT = 0x0000;
@@ -95,6 +96,8 @@ int main(void){
 
     // a read clears the register -- ready for TX/RX
     tmp = UART0_SR;
+
+    uart_puts((str_t *)"in main()!");
 
 
     /*

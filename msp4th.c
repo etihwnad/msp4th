@@ -3,6 +3,13 @@
  * TODO:
  *  - use enum for VM opcodes
  *  - speed up pop/pushMathStack (need bounds check??)
+ *  - UART usage is blocking, convert to interrupt-based
+ *  - allow configurable user-code space
+ *      prog[], cmdList[], progOps[]
+ *      array locations come from a vector table instead of hard-coded
+ *      locations in bss space.  init_msp4th() populates the pointers
+ *      with values from the table (which can be user-written to effect
+ *      changing user code sizes.
  *
  */
 
@@ -494,14 +501,17 @@ int16_t popMathStack(void)
     int16_t i;
     int16_t j;
 
-    j = mathStack[0];
-
-    for (i=1; i < mathStackDepth; i++) {
-        mathStack[i-1] = mathStack[i];
-    }
 
     if (mathStackDepth > 0) {
+        j = mathStack[0];
+
+        for (i=1; i < mathStackDepth; i++) {
+            mathStack[i-1] = mathStack[i];
+        }
+
         mathStackDepth--;
+    } else {
+        j = 0;
     }
 
     return(j);
@@ -1215,7 +1225,7 @@ void init_msp4th(void)
     }
 
     getLine();
-    pushMathStack(0);
+    //pushMathStack(0);
 }
 
 
