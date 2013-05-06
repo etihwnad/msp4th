@@ -73,6 +73,53 @@ void init_uart(void)
 
 
 
+/*
+ * Default msp4th settings
+ */
+#define MATH_STACK_SIZE 32
+#define ADDR_STACK_SIZE 64
+
+//total length of all user programs in opcodes
+#define USER_PROG_SIZE 256
+
+//max number of user-defined words
+#define USER_OPCODE_MAPPING_SIZE 32
+
+//total string length of all word names (+ 1x<space> each)
+#define USER_CMD_LIST_SIZE 128
+
+/*
+ * The ".lastram" section should be placed so these vectors are the last part
+ * of allocated RAM.  All space beyond, up until 0xff00, is empty or unused.
+ */
+int16_t __attribute__ ((section(".noinit"))) mathStackArray[MATH_STACK_SIZE];
+int16_t __attribute__ ((section(".noinit"))) addrStackArray[ADDR_STACK_SIZE];
+int16_t __attribute__ ((section(".noinit"))) progArray[USER_PROG_SIZE];
+int16_t __attribute__ ((section(".noinit"))) progOpcodesArray[USER_OPCODE_MAPPING_SIZE];
+uint8_t __attribute__ ((section(".noinit"))) cmdListArray[USER_CMD_LIST_SIZE];
+
+
+void config_default_msp4th(void)
+{
+    int16_t i;
+
+    mathStackStartAddress = (uint16_t)&mathStackArray[MATH_STACK_SIZE - 1];
+    addrStackStartAddress = (uint16_t)&addrStackArray[ADDR_STACK_SIZE - 1];
+    progStartAddress = (uint16_t)&progArray[0];
+    progOpcodesStartAddress = (uint16_t)&progOpcodesArray[0];
+    cmdListStartAddress = (uint16_t)&cmdListArray[0];
+
+
+    for (i=0; i < MATH_STACK_SIZE; i++) {
+        mathStackArray[i] = 0;
+    }
+
+    for (i=0; i < ADDR_STACK_SIZE; i++) {
+        addrStackArray[i] = 0;
+    }
+}
+
+
 
 int main(void){
     /*
@@ -109,6 +156,8 @@ int main(void){
      *
      * word "exit" makes processLoop() return
      */
+    config_default_msp4th();
+
     while (1) {
         init_msp4th();
         processLoop();

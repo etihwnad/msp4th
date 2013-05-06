@@ -2,7 +2,6 @@
 
 
 .equ StackStart, 0xff00
-.equ RAMCodeStart, 0x4000
 
 ; msp430-gcc uses r[0,1,2] not pc,sp,sr
 

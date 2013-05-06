@@ -5,7 +5,8 @@
  *  - speed up pop/pushMathStack (need bounds check??)
  *  - UART usage is blocking, convert to interrupt-based
  *  - allow configurable user-code space
- *      prog[], cmdList[], progOps[]
+ *      mathStack[], addrStack[]
+ *      prog[], cmdList[], progOpcodes[]
  *      array locations come from a vector table instead of hard-coded
  *      locations in bss space.  init_msp4th() populates the pointers
  *      with values from the table (which can be user-written to effect
@@ -36,18 +37,13 @@ void uart_puts(uint8_t *s) { puts((char *)s); }
 #define ALIGN_2 __attribute__ ((aligned (2)))
 
 /* 
- * Configuration constants
+ * Hard-coded constants
+ *
+ * buffer lengths don't need to be configurable, right?
  */
-#define MATH_STACK_SIZE 32
-#define ADDR_STACK_SIZE 64
-#define CMD_LIST_SIZE 128
-#define PROG_SPACE 256
-#define USR_OPCODE_SIZE 32
-
 #define LINE_SIZE 128
 #define WORD_SIZE 32
 
-#define BI_PROG_SHIFT 10000
 
 /*
  * Local function prototypes
@@ -81,9 +77,8 @@ void execFunc(void);
  *
  ***************************************************************************/
 
-// must end in a space !!!!
-// The order is important .... don't insert anything!
-// the order matches the execN function
+// The order matches the execN function and determines the opcode value.
+// NOTE: must end in a space !!!!
 const uint8_t cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
@@ -330,6 +325,9 @@ uint8_t wordBuffer[WORD_SIZE];      // just get a word
  * sizes can be (re-)specified by changing the table and calling init_msp4th()
  * again.
  */
+
+
+
 #if defined(MSP430)
 int16_t register *mathStackPtr asm("r6");
 #else
@@ -342,16 +340,18 @@ int16_t register *addrStackPtr asm("r7");
 int16_t *addrStackPtr;
 #endif
 
-uint16_t progIdx;           // next open space for user opcodes
-uint16_t cmdListIdx;
+int16_t *prog;          // user programs (opcodes) are placed here
+uint16_t progIdx;       // next open space for user opcodes
+
+int16_t *progOpcodes;   // mapping between user word index and program opcodes
+                        // start index into prog[]
+
+uint8_t *cmdList;       // string of user defined word names
+uint16_t cmdListIdx;    // next open space for user word strings
+
 
 // TODO re-defined
-int16_t mathStack[MATH_STACK_SIZE];
-int16_t addrStack[ADDR_STACK_SIZE];
 
-uint8_t cmdList[CMD_LIST_SIZE];  // just a string of user defined names
-int16_t prog[PROG_SPACE];  // user programs are placed here
-int16_t progOps[USR_OPCODE_SIZE];
 
 
 
@@ -510,7 +510,7 @@ int16_t popMathStack(void)
     i = *mathStackPtr;
 
     // prevent stack under-flow
-    if (mathStackPtr < &mathStack[MATH_STACK_SIZE - 1]) {
+    if (mathStackPtr < (int16_t *)mathStackStartAddress) {
         mathStackPtr++;
     }
 
@@ -743,7 +743,7 @@ void dfnFunc(){
   cmdList[cmdListIdx++] = ' ';
   cmdList[cmdListIdx] = 0;
   i = lookupToken(wordBuffer,cmdList);
-  progOps[i] = progIdx;
+  progOpcodes[i] = progIdx;
 }
 
 
@@ -817,7 +817,7 @@ void execFunc(){
   } else {
 
     pushAddrStack(progCounter);
-    progCounter = progOps[opcode];
+    progCounter = progOpcodes[opcode];
 
   }
 
@@ -933,9 +933,6 @@ void execN(int16_t opcode){
 
     case 17: // allot  ( opcode -- ) \ push opcode to prog space
       prog[progIdx++] = popMathStack();
-      if(progIdx >= PROG_SPACE){
-        uart_puts((str_t *)"ERR: prog full");
-      }
       break;
 
     case 18: // p@  ( opaddr -- opcode )
@@ -1204,23 +1201,29 @@ void init_msp4th(void)
 
     xit = 0;
 
-    mathStackPtr = &mathStack[MATH_STACK_SIZE - 1];
-    addrStackPtr = &addrStack[ADDR_STACK_SIZE - 1];
+    /*
+     * Get addresses of user-configurable arrays from the pre-known vector
+     * table locations.
+     *
+     * Changing the values in the xStartAddress locations and calling
+     * init_msp4th() again restarts the interpreter with the new layout;
+     */
+    mathStackPtr = (int16_t *)mathStackStartAddress;
+    addrStackPtr = (int16_t *)addrStackStartAddress;
+    prog = (int16_t *)progStartAddress;
+    progOpcodes = (int16_t *)progOpcodesStartAddress;
+    cmdList = (uint8_t *)cmdListStartAddress;
+
+
+
     progCounter = 10000;
     progIdx = 1;			// this will be the first opcode
-    i=0;
+
+
     cmdListIdx = 0;
-    cmdList[0] = 0;
 
     dirMemory = (void *) 0;   // its an array starting at zero
 
-    for (i=0; i < MATH_STACK_SIZE; i++) {
-        mathStack[i] = 0;
-    }
-
-    for (i=0; i < ADDR_STACK_SIZE; i++) {
-        addrStack[i] = 0;
-    }
 
     lineBufferIdx = 0;
     for (i=0; i < LINE_SIZE; i++) {
@@ -1255,7 +1258,7 @@ void processLoop() // this processes the forth opcodes.
             execN(opcode - 20000);
         } else {
             pushAddrStack(progCounter);
-            progCounter = progOps[opcode];
+            progCounter = progOpcodes[opcode];
         }
     } // while ()
 }
