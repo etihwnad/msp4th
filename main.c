@@ -14,7 +14,8 @@
 
 
 /*
- * Re-define the startup/reset behavior to this.
+ * Re-define the startup/reset behavior to this.  GCC normally uses this
+ * opportunity to initialize all variables (bss) to zero.
  *
  * By doing this, we take all initialization into our own hands.
  *
@@ -54,6 +55,21 @@ static void __inline__ eint(void){
 
 
 
+void init_uart(void)
+{
+    int16_t tmp;
+    // chip setup for UART0 use
+    PAPER = 0x0030;
+    PAOUT = 0x0000;
+    PAOEN = 0x0010;  // set data direction registers
+
+    UART0_BCR = UART_BCR(DEVBOARD_CLOCK, BAUDRATE);
+    UART0_CR = UARTEn;
+
+    // a read clears the register -- ready for TX/RX
+    tmp = UART0_SR;
+}
+
 
 
 
@@ -79,26 +95,14 @@ int main(void){
      *  where the label is searched for forwards or backwards according to the
      *  suffix Nf or Nb.
      */
+#ifdef BOOTROM
+    asm(".set BOOTROM, 1");
+#endif
     asm(".include \"flashboot.s\"");
 
-    int16_t tmp;
 
     dint();
-
-
-    // chip setup for UART0 use
-    PAPER = 0x0030;
-    PAOUT = 0x0000;
-    PAOEN = 0x0010;  // set data direction registers
-
-    UART0_BCR = UART_BCR(DEVBOARD_CLOCK, BAUDRATE);
-    UART0_CR = UARTEn;
-
-    // a read clears the register -- ready for TX/RX
-    tmp = UART0_SR;
-
-    uart_puts((str_t *)"in main()!");
-
+    init_uart();
 
     /*
      * Startup and run msp4th interp

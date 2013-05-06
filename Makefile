@@ -10,6 +10,9 @@
 # 
 SHELL = /bin/bash
 
+DEFINE ?=
+LDSCRIPT ?= ldscript_ns430
+
 TARGET  = main
 #MCU     = msp430f5529
 MCU     = msp2
@@ -31,13 +34,15 @@ INCLUDES = -I.
 #CFLAGS   = -mmcu=$(MCU) -Werror -Wall -Wunused -mendup-at=main $(INCLUDES)
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
 #CFLAGS   = -mmcu=$(MCU) -g -Os -Werror -Wall -Wunused $(INCLUDES)
-CFLAGS   = -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -g -Os -Werror -Wall -Wunused $(INCLUDES)
+CFLAGS   = $(DEFINE) -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -g -Os -Werror -Wall -Wunused $(INCLUDES)
 #ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 #ASFLAGS  = -mmcu=$(MCU) -Wall -Wunused -mendup-at=main $(INCLUDES)
 #ASFLAGS  = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)
-ASFLAGS  = -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -g -Os -Wall -Wunused $(INCLUDES)
+ASFLAGS  = $(DEFINE) -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -g -Os -Wall -Wunused $(INCLUDES)
 #LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map -T ldscript_ns430
-LDFLAGS  = -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -Wl,-Map=$(TARGET).map -T ldscript_ns430
+#LDFLAGS  = -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -Wl,-Map=$(TARGET).map -T ldscript_ns430
+LDFLAGS  = $(DEFINE) -mcpu=$(CPU) -mmpy=$(MPY) -mivcnt=$(IVCNT) -Wl,-Map=$(TARGET).map -T $(LDSCRIPT)
+
 ########################################################################################
 CC       = msp430-gcc
 LD       = msp430-ld
@@ -59,13 +64,16 @@ MV       = mv
 DEPEND = $(SOURCES:.c=.d)
 
 # all the object files
-OBJECTS = $(SOURCES:.c=.o) $(ASMS:.s=.o)
+OBJECTS = $(SOURCES:.c=.o)
 
 # all asm files
 ASSEMBLYS = $(SOURCES:.c=.lst)
 
 #all: $(TARGET).elf $(TARGET).hex $(TARGET).txt 
 all: $(TARGET).elf $(TARGET).hex $(TARGET).xout $(ASSEMBLYS)
+
+#we .include this, so it doesn't make it to the auto-generated dependencies
+main.o: flashboot.s
 
 $(TARGET).elf: $(OBJECTS)
 	@echo "Linking $@"
@@ -120,6 +128,10 @@ endif
 %.d: %.c
 	@echo "Generating dependencies $@ from $<"
 	$(CC) -M ${CFLAGS} $< >$@
+
+bootrom.rcf: $(SOURCES) flashboot.s
+	$(MAKE) -B DEFINE=-DBOOTROM LDSCRIPT=ldscript_ns430_bootrom all
+	../ihex2rcf.py --width=16 --start=0x3000 --length=0x1000 --default=0x0000 main.hex > $@
 
 .PHONY:	flash
 flash: $(TARGET).hex
