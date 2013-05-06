@@ -719,12 +719,10 @@ void dfnFunc(){
   // this function adds a new def to the list and creats a new opcode
   i = 0;
   while(wordBuffer[i]){
-    cmdList[cmdListPtr] = wordBuffer[i];
-    cmdListPtr = cmdListPtr + 1;
+    cmdList[cmdListPtr++] = wordBuffer[i];
     i = i + 1;
   }
-  cmdList[cmdListPtr] = ' ';
-  cmdListPtr = cmdListPtr + 1;
+  cmdList[cmdListPtr++] = ' ';
   cmdList[cmdListPtr] = 0;
   i = lookupToken(wordBuffer,cmdList);
   progOps[i] = progPtr;
