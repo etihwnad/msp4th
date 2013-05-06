@@ -321,7 +321,7 @@ int16_t xit;
 uint16_t progCounter;
 
 uint8_t lineBuffer[LINE_SIZE];      /* input line buffer */
-uint16_t lineBufferPtr;             /* input line buffer pointer */
+uint16_t lineBufferIdx;             /* input line buffer pointer */
 
 uint8_t wordBuffer[WORD_SIZE];      // just get a word
 
@@ -342,18 +342,16 @@ int16_t register *addrStackPtr asm("r7");
 int16_t *addrStackPtr;
 #endif
 
-int16_t prog[PROG_SPACE];  // user programs are placed here
-uint16_t progPtr;           // next open space for user opcodes
-
-int16_t progOps[USR_OPCODE_SIZE];
-uint16_t progOpsPtr;
-
-uint8_t cmdList[CMD_LIST_SIZE];  // just a string of user defined names
-uint16_t cmdListPtr;
+uint16_t progIdx;           // next open space for user opcodes
+uint16_t cmdListIdx;
 
 // TODO re-defined
 int16_t mathStack[MATH_STACK_SIZE];
 int16_t addrStack[ADDR_STACK_SIZE];
+
+uint8_t cmdList[CMD_LIST_SIZE];  // just a string of user defined names
+int16_t prog[PROG_SPACE];  // user programs are placed here
+int16_t progOps[USR_OPCODE_SIZE];
 
 
 
@@ -374,10 +372,10 @@ static int16_t RAMerrors(void){
 uint8_t getKeyB(){
     uint8_t c;
 
-    c = lineBuffer[lineBufferPtr++];
+    c = lineBuffer[lineBufferIdx++];
     if (c == 0) {
         getLine();
-        c = lineBuffer[lineBufferPtr++];
+        c = lineBuffer[lineBufferIdx++];
     }
 
     return (c);
@@ -389,7 +387,7 @@ void getLine()
     int16_t waiting;
     uint8_t c;
 
-    lineBufferPtr = 0;
+    lineBufferIdx = 0;
 
     uart_putchar('\r');
     uart_putchar('\n');
@@ -399,27 +397,27 @@ void getLine()
     while (waiting) {  // just hang in loop until we get CR
         c = uart_getchar();
 
-        if ((c == '\b') && (lineBufferPtr > 0)) {
+        if ((c == '\b') && (lineBufferIdx > 0)) {
             uart_putchar('\b');
             uart_putchar(' ');
             uart_putchar('\b');
-            lineBufferPtr--;
-        } else if ( ((c == 255) || (c == '')) && (lineBufferPtr == 0)) {
+            lineBufferIdx--;
+        } else if ( ((c == 255) || (c == '')) && (lineBufferIdx == 0)) {
             xit = 1;
             waiting = 0;
         } else {
             uart_putchar(c);
             if ( (c == '\r') ||
                  (c == '\n') ||
-                 (lineBufferPtr >= (LINE_SIZE - 1))) { // prevent overflow of line buffer
+                 (lineBufferIdx >= (LINE_SIZE - 1))) { // prevent overflow of line buffer
                 waiting = 0;
             }
-            lineBuffer[lineBufferPtr++] = c;
-            lineBuffer[lineBufferPtr] = 0;
+            lineBuffer[lineBufferIdx++] = c;
+            lineBuffer[lineBufferIdx] = 0;
         }
     }
     uart_putchar('\n');
-    lineBufferPtr = 0;
+    lineBufferIdx = 0;
 }
 
 
@@ -739,13 +737,13 @@ void dfnFunc(){
   // this function adds a new def to the list and creats a new opcode
   i = 0;
   while(wordBuffer[i]){
-    cmdList[cmdListPtr++] = wordBuffer[i];
+    cmdList[cmdListIdx++] = wordBuffer[i];
     i = i + 1;
   }
-  cmdList[cmdListPtr++] = ' ';
-  cmdList[cmdListPtr] = 0;
+  cmdList[cmdListIdx++] = ' ';
+  cmdList[cmdListIdx] = 0;
   i = lookupToken(wordBuffer,cmdList);
-  progOps[i] = progPtr;
+  progOps[i] = progIdx;
 }
 
 
@@ -934,8 +932,8 @@ void execN(int16_t opcode){
       break;
 
     case 17: // allot  ( opcode -- ) \ push opcode to prog space
-      prog[progPtr++] = popMathStack();
-      if(progPtr >= PROG_SPACE){
+      prog[progIdx++] = popMathStack();
+      if(progIdx >= PROG_SPACE){
         uart_puts((str_t *)"ERR: prog full");
       }
       break;
@@ -1055,7 +1053,7 @@ void execN(int16_t opcode){
       break;
 
     case 43: // h@  ( -- prog ) \ end of program code space
-      pushMathStack(progPtr);
+      pushMathStack(progIdx);
       break;
 
     case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
@@ -1209,11 +1207,10 @@ void init_msp4th(void)
     mathStackPtr = &mathStack[MATH_STACK_SIZE - 1];
     addrStackPtr = &addrStack[ADDR_STACK_SIZE - 1];
     progCounter = 10000;
-    progPtr = 1;			// this will be the first opcode
+    progIdx = 1;			// this will be the first opcode
     i=0;
-    cmdListPtr = 0;
+    cmdListIdx = 0;
     cmdList[0] = 0;
-    progOpsPtr = 1;      // just skip location zero .... it makes it easy for us
 
     dirMemory = (void *) 0;   // its an array starting at zero
 
@@ -1225,7 +1222,7 @@ void init_msp4th(void)
         addrStack[i] = 0;
     }
 
-    lineBufferPtr = 0;
+    lineBufferIdx = 0;
     for (i=0; i < LINE_SIZE; i++) {
         lineBuffer[i] = 0;
     }
