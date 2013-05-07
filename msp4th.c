@@ -5,7 +5,8 @@
  *  - speed up pop/pushMathStack (need bounds check??)
  *  - UART usage is blocking, convert to interrupt-based
  *  - allow configurable user-code space
- *      prog[], cmdList[], progOps[]
+ *      mathStack[], addrStack[]
+ *      prog[], cmdList[], progOpcodes[]
  *      array locations come from a vector table instead of hard-coded
  *      locations in bss space.  init_msp4th() populates the pointers
  *      with values from the table (which can be user-written to effect
@@ -15,18 +16,13 @@
 
 
 #if defined(MSP430)
-/* use devboard uart */
+#include "ns430.h"
 #include "ns430-atoi.h"
-#include "ns430-uart.h"
 
 #else
-/* mixins to test msp4th on PC */
-#include <stdio.h>
+// mixins to test msp4th on PC
 #include <stdint.h>
 typedef uint8_t str_t;
-void uart_putchar(uint8_t c) { putchar(c); }
-uint8_t uart_getchar(void) { return (uint8_t)getchar(); }
-void uart_puts(uint8_t *s) { puts((char *)s); }
 #endif
 
 
@@ -36,18 +32,13 @@ void uart_puts(uint8_t *s) { puts((char *)s); }
 #define ALIGN_2 __attribute__ ((aligned (2)))
 
 /* 
- * Configuration constants
+ * Hard-coded constants
+ *
+ * buffer lengths don't need to be configurable, right?
  */
-#define MATH_STACK_SIZE 32
-#define ADDR_STACK_SIZE 64
-#define CMD_LIST_SIZE 128
-#define PROG_SPACE 256
-#define USR_OPCODE_SIZE 32
-
 #define LINE_SIZE 128
 #define WORD_SIZE 32
 
-#define BI_PROG_SHIFT 10000
 
 /*
  * Local function prototypes
@@ -60,6 +51,7 @@ int16_t popMathStack(void);
 void pushMathStack(int16_t n);
 int16_t popAddrStack(void);
 void pushAddrStack(int16_t n);
+void ndropFunc(void);
 int16_t lookupToken(uint8_t *x, uint8_t *l);
 void luFunc(void);
 void numFunc(void);
@@ -74,12 +66,14 @@ void printHexWord(int16_t n);
 void execN(int16_t n);
 void execFunc(void);
 
-/*
- * Module-level global vars
- */
-// must end in a space !!!!
-// The order is important .... don't insert anything!
-// the order matches the execN function
+/****************************************************************************
+ *
+ * Module-level global constants (in ROM)
+ *
+ ***************************************************************************/
+
+// The order matches the execN function and determines the opcode value.
+// NOTE: must end in a space !!!!
 const uint8_t cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
@@ -103,25 +97,6 @@ const uint8_t cmdListBi2[] = {"[ : var "};
 
 // these values point to where in progBi[] these routines start
 const int16_t cmdList2N[] = {0,10000,10032,10135};  // need an extra zero at the front
-
-
-int16_t ALIGN_2 mathStack[MATH_STACK_SIZE];
-int16_t mathStackDepth;
-
-int16_t ALIGN_2 addrStack[ADDR_STACK_SIZE];
-uint16_t addrStackPtr;
-
-int16_t ALIGN_2 prog[PROG_SPACE];  // user programs are placed here
-uint16_t progPtr;           // next open space for user opcodes
-int16_t ALIGN_2 progOps[USR_OPCODE_SIZE];
-uint16_t progOpsPtr;
-uint8_t ALIGN_2 cmdList[CMD_LIST_SIZE];  // just a string of user defined names
-uint16_t cmdListPtr;
-
-
-// our "special" pointer, direct word access to all address space
-volatile int16_t *dirMemory;
-
 
 
 // to flag the initial built in functions from the rest, save the negative of them in the program space (prog).
@@ -320,15 +295,61 @@ const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
    20040,        // 147 return
    
    };   
-         
+
+
+/****************************************************************************
+ *
+ * Module-level global variables (in RAM)
+ *
+ ***************************************************************************/
+// our "special" pointer, direct word access to all address space
+volatile int16_t *dirMemory;
+
+// set to 1 to kill program
+int16_t xit;
+
 uint16_t progCounter;
 
 uint8_t lineBuffer[LINE_SIZE];      /* input line buffer */
+uint16_t lineBufferIdx;             /* input line buffer pointer */
 
-uint16_t lineBufferPtr;                 /* input line buffer pointer */
-int16_t xit;                    /* set to 1 to kill program */
+uint8_t wordBuffer[WORD_SIZE];      // just get a word
 
-uint8_t wordBuffer[WORD_SIZE];		// just get a word
+/* The following utilize a vector table to allow re-configuring the
+ * location/size of these arrays.  Then the stack sizes and user program space
+ * sizes can be (re-)specified by changing the table and calling init_msp4th()
+ * again.
+ */
+
+
+
+#if defined(MSP430)
+int16_t register *mathStackPtr asm("r6");
+#else
+int16_t *mathStackPtr;
+#endif
+
+#if defined(MSP430)
+int16_t register *addrStackPtr asm("r7");
+#else
+int16_t *addrStackPtr;
+#endif
+
+int16_t *prog;          // user programs (opcodes) are placed here
+uint16_t progIdx;       // next open space for user opcodes
+
+int16_t *progOpcodes;   // mapping between user word index and program opcodes
+                        // start index into prog[]
+
+uint8_t *cmdList;       // string of user defined word names
+uint16_t cmdListIdx;    // next open space for user word strings
+
+
+// TODO re-defined
+
+
+
+
 
 
 
@@ -343,19 +364,17 @@ static int16_t RAMerrors(void){
 }
 
 
-
 uint8_t getKeyB(){
     uint8_t c;
 
-    c = lineBuffer[lineBufferPtr++];
+    c = lineBuffer[lineBufferIdx++];
     if (c == 0) {
         getLine();
-        c = lineBuffer[lineBufferPtr++];
+        c = lineBuffer[lineBufferIdx++];
     }
 
     return (c);
 }
-
 
 
 void getLine()
@@ -363,39 +382,38 @@ void getLine()
     int16_t waiting;
     uint8_t c;
 
-    lineBufferPtr = 0;
+    lineBufferIdx = 0;
 
-    uart_putchar('\r');
-    uart_putchar('\n');
-    uart_putchar('>');   // this is our prompt
+    msp4th_putchar('\r');
+    msp4th_putchar('\n');
+    msp4th_putchar('>');   // this is our prompt
 
     waiting = 1;
     while (waiting) {  // just hang in loop until we get CR
-        c = uart_getchar();
+        c = msp4th_getchar();
 
-        if ((c == '\b') && (lineBufferPtr > 0)) {
-            uart_putchar('\b');
-            uart_putchar(' ');
-            uart_putchar('\b');
-            lineBufferPtr--;
-        } else if ( ((c == 255) || (c == '')) && (lineBufferPtr == 0)) {
+        if ((c == '\b') && (lineBufferIdx > 0)) {
+            msp4th_putchar('\b');
+            msp4th_putchar(' ');
+            msp4th_putchar('\b');
+            lineBufferIdx--;
+        } else if ( ((c == 255) || (c == '')) && (lineBufferIdx == 0)) {
             xit = 1;
             waiting = 0;
         } else {
-            uart_putchar(c);
+            msp4th_putchar(c);
             if ( (c == '\r') ||
                  (c == '\n') ||
-                 (lineBufferPtr >= (LINE_SIZE - 1))) { // prevent overflow of line buffer
+                 (lineBufferIdx >= (LINE_SIZE - 1))) { // prevent overflow of line buffer
                 waiting = 0;
             }
-            lineBuffer[lineBufferPtr++] = c;
-            lineBuffer[lineBufferPtr] = 0;
+            lineBuffer[lineBufferIdx++] = c;
+            lineBuffer[lineBufferIdx] = 0;
         }
     }
-    uart_putchar('\n');
-    lineBufferPtr = 0;
+    msp4th_putchar('\n');
+    lineBufferIdx = 0;
 }
-
 
 
 uint8_t nextPrintableChar(void)
@@ -468,81 +486,70 @@ void getWord(void)
 }
 
 
-
 void listFunction()
 {
-    uart_puts((str_t *)cmdListBi);
-    uart_puts((str_t *)cmdListBi2);
-    uart_puts((str_t *)cmdList);
+    msp4th_puts((str_t *)cmdListBi);
+    msp4th_puts((str_t *)cmdListBi2);
+    msp4th_puts((str_t *)cmdList);
 }
 
-  
-void ndropFunc(void)
-{
-    int16_t i;
-    int16_t n;
 
-    n = mathStack[0] + 1; // drop the *drop count* also
-
-    for (i=n; i < mathStackDepth; i++) {
-        mathStack[i-n] = mathStack[i];
-    }
-
-    if (mathStackDepth < n) {
-        mathStackDepth = 0;
-    } else {
-        mathStackDepth -= n;
-    }
-}
-
+#define TOS (*mathStackPtr)
+#define NOS (*(mathStackPtr + 1))
+#define STACK(n) (*(mathStackPtr + n))
 
 int16_t popMathStack(void)
 {
     int16_t i;
-    int16_t j;
 
+    i = *mathStackPtr;
 
-    if (mathStackDepth > 0) {
-        j = mathStack[0];
-
-        for (i=1; i < mathStackDepth; i++) {
-            mathStack[i-1] = mathStack[i];
-        }
-
-        mathStackDepth--;
-    } else {
-        j = 0;
+    // prevent stack under-flow
+    if (mathStackPtr < (int16_t *)mathStackStartAddress) {
+        mathStackPtr++;
     }
 
-    return(j);
+    return(i);
 }
+
 
 void pushMathStack(int16_t n)
 {
-    int16_t i;
-
-    mathStackDepth++;
-
-    for (i=mathStackDepth; i > 0; i--) {
-        mathStack[i] = mathStack[i-1];
-    }
-
-    mathStack[0] = n;
+    mathStackPtr--;
+    *mathStackPtr = n;
 }
+
+
+#define ATOS (addrStackPtr)
+#define ANOS (*(addrStackPtr + 1))
+#define ASTACK(n) (*(addrStackPtr + n))
 
 int16_t popAddrStack(void)
 {
-    int16_t j;
-    j = addrStack[addrStackPtr];
+    int16_t i;
+
+    i = *addrStackPtr;
     addrStackPtr++;
-    return(j);
+
+    return(i);
 }
+
 
 void pushAddrStack(int16_t n)
 {
     addrStackPtr--;
-    addrStack[addrStackPtr] = n;
+    *addrStackPtr = n;
 }
+
+
+void ndropFunc(void)
+{
+    int16_t n;
+
+    n = TOS + 1; // drop the *drop count* also
+    mathStackPtr += n;
+}
+
 
 int16_t lookupToken(uint8_t *x, uint8_t *l){    // looking for x in l
   int16_t i,j,k,n;
@@ -589,6 +596,7 @@ int16_t lookupToken(uint8_t *x, uint8_t *l){    // looking for x in l
   return(k);
 }
 
+
 void luFunc(){
   int16_t i;
   
@@ -616,6 +624,7 @@ void luFunc(){
     }
   }  
 } 
+
 
 void numFunc()
 {  // the word to test is in wordBuffer
@@ -671,6 +680,7 @@ void numFunc()
     pushMathStack(j);
 }
 
+
 void ifFunc(int16_t x){     // used as goto if x == 1
     uint16_t addr;
     uint16_t tmp;
@@ -697,6 +707,7 @@ void ifFunc(int16_t x){     // used as goto if x == 1
     }
 }
 
+
 void pushnFunc(){
   int16_t i;
   if(progCounter > 9999){
@@ -708,24 +719,26 @@ void pushnFunc(){
   pushMathStack(i);
 }
 
+
 void overFunc(){
   int16_t i;
-  i = mathStack[1];
+  i = NOS;
   pushMathStack(i);
 }
+
 
 void dfnFunc(){
   uint16_t i;
   // this function adds a new def to the list and creats a new opcode
   i = 0;
   while(wordBuffer[i]){
-    cmdList[cmdListPtr++] = wordBuffer[i];
+    cmdList[cmdListIdx++] = wordBuffer[i];
     i = i + 1;
   }
-  cmdList[cmdListPtr++] = ' ';
-  cmdList[cmdListPtr] = 0;
+  cmdList[cmdListIdx++] = ' ';
+  cmdList[cmdListIdx] = 0;
   i = lookupToken(wordBuffer,cmdList);
-  progOps[i] = progPtr;
+  progOpcodes[i] = progIdx;
 }
 
 
@@ -737,7 +750,7 @@ void printNumber(register int16_t n)
     uint8_t x[7];
 
     if (n < 0) {
-        uart_putchar('-');
+        msp4th_putchar('-');
         nu = -n;
     } else {
         nu = n;
@@ -753,11 +766,12 @@ void printNumber(register int16_t n)
 
     do{
         i = i - 1;
-        uart_putchar(x[i]);
+        msp4th_putchar(x[i]);
     } while (i > 0);
 
-    uart_putchar(' ');
+    msp4th_putchar(' ');
 }
+
 
 void printHexChar(int16_t n){
   n &= 0x0F;
@@ -765,8 +779,9 @@ void printHexChar(int16_t n){
     n += 7;
   }
   n += '0';
-  uart_putchar(n);
+  msp4th_putchar(n);
 }
+
 
 void printHexByte(int16_t n){
   n &= 0xFF;
@@ -774,10 +789,12 @@ void printHexByte(int16_t n){
   printHexChar(n);
 }
 
+
 void printHexWord(int16_t n){
   printHexByte(n >> 8);
   printHexByte(n);
 }
+
 
 void execFunc(){
   int16_t opcode;
@@ -795,7 +812,7 @@ void execFunc(){
   } else {
 
     pushAddrStack(progCounter);
-    progCounter = progOps[opcode];
+    progCounter = progOpcodes[opcode];
 
   }
 
@@ -815,39 +832,32 @@ void execN(int16_t opcode){
       break;
 
     case  2: // +  ( a b -- a+b )
-      mathStack[1] += mathStack[0];
+      NOS += TOS;
       popMathStack();
       break;
 
     case  3: // -  ( a b -- a-b )
-      mathStack[1] += -mathStack[0];
+      NOS += -TOS;
       popMathStack();
       break;
-
-      /*
-    case  4: // *  ( a b -- a*b )
-      mathStack[1] = mathStack[0] * mathStack[1];
-      popMathStack();
-      break;
-      */
 
     case  4: // *  ( a b -- reshi reslo )
 #if defined(MSP430)
       asm("dint");
-      MPYS = mathStack[1];
-      OP2 = mathStack[0];
-      mathStack[1] = RESHI;
-      mathStack[0] = RESLO;
+      MPYS = NOS;
+      OP2 = TOS;
+      NOS = RESHI;
+      TOS = RESLO;
       asm("eint");
 #else
-      x = mathStack[0] * mathStack[1];
-      mathStack[1] = (int16_t)((x >> 16) & 0xffff);
-      mathStack[0] = (int16_t)(x & 0xffff);
+      x = TOS * NOS;
+      NOS = (int16_t)((x >> 16) & 0xffff);
+      TOS = (int16_t)(x & 0xffff);
 #endif
       break;
 
     case  5: // /  ( a b -- a/b )
-      mathStack[1] = mathStack[1] / mathStack[0];
+      NOS = NOS / TOS;
       popMathStack();
       break;
 
@@ -856,7 +866,7 @@ void execN(int16_t opcode){
       break;
 
     case  7: // dup  ( a -- a a )
-      pushMathStack(mathStack[0]);
+      pushMathStack(TOS);
       break;
 
     case  8: // drop  ( a -- )
@@ -864,35 +874,35 @@ void execN(int16_t opcode){
       break;
 
     case  9: // swap  ( a b -- b a )
-      i = mathStack[0];
-      mathStack[0] = mathStack[1];
-      mathStack[1] = i;
+      i = TOS;
+      TOS = NOS;
+      NOS = i;
       break;
 
     case 10: // <  ( a b -- a<b )
       i = popMathStack();
-      if(mathStack[0] < i){
-        mathStack[0] = 1;
+      if(TOS < i){
+        TOS = 1;
       } else {
-        mathStack[0] = 0;
+        TOS = 0;
       }
       break;      
 
     case 11: // >  ( a b -- a>b )
       i = popMathStack();
-      if(mathStack[0] > i){
-        mathStack[0] = 1;
+      if(TOS > i){
+        TOS = 1;
       } else {
-        mathStack[0] = 0;
+        TOS = 0;
       }
       break;      
 
     case 12: // ==  ( a b -- a==b )
       i = popMathStack();
-      if(i == mathStack[0]){
-        mathStack[0] = 1;
+      if(i == TOS){
+        TOS = 1;
       } else {
-        mathStack[0] = 0;
+        TOS = 0;
       }
       break;      
 
@@ -917,15 +927,12 @@ void execN(int16_t opcode){
       break;
 
     case 17: // allot  ( opcode -- ) \ push opcode to prog space
-      prog[progPtr++] = popMathStack();
-      if(progPtr >= PROG_SPACE){
-        uart_puts((str_t *)"ERR: prog full");
-      }
+      prog[progIdx++] = popMathStack();
       break;
 
     case 18: // p@  ( opaddr -- opcode )
-      i = mathStack[0];
-      mathStack[0] = prog[i];
+      i = TOS;
+      TOS = prog[i];
       break;
 
     case 19: // p!  ( opcode opaddr -- )
@@ -935,10 +942,10 @@ void execN(int16_t opcode){
       break;
 
     case 20: // not  ( a -- !a ) \ logical not
-      if(mathStack[0]){
-        mathStack[0] = 0;
+      if(TOS){
+        TOS = 0;
       } else {
-        mathStack[0] = 1;
+        TOS = 1;
       }
       break;
 
@@ -1013,11 +1020,11 @@ void execN(int16_t opcode){
       break;
 
     case 38: // pwrd  ( -- ) \ print word buffer
-      uart_puts((str_t *)wordBuffer);
+      msp4th_puts((str_t *)wordBuffer);
       break;
 
     case 39: // emit  ( c -- )
-      uart_putchar(popMathStack());
+      msp4th_putchar(popMathStack());
       break;
 
     case 40: // ;  ( pcnt -a- )
@@ -1026,8 +1033,8 @@ void execN(int16_t opcode){
       break;
 
     case 41: // @  ( addr -- val ) \ read directly from memory address
-      i = mathStack[0] >> 1;
-      mathStack[0] = dirMemory[i];
+      i = TOS >> 1;
+      TOS = dirMemory[i];
       break;
       
     case 42: // !  ( val addr -- ) \ write directly to memory address words only!
@@ -1038,7 +1045,7 @@ void execN(int16_t opcode){
       break;
 
     case 43: // h@  ( -- prog ) \ end of program code space
-      pushMathStack(progPtr);
+      pushMathStack(progIdx);
       break;
 
     case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
@@ -1069,26 +1076,26 @@ void execN(int16_t opcode){
       break;
       
     case 46: // i  ( -- cnt ) \ loop counter value
-      j = addrStack[addrStackPtr+1];
+      j = ANOS;
       pushMathStack(j);
       break;
 
     case 47: // ~  ( a -- ~a ) \ bitwise complement
-      mathStack[0] = ~mathStack[0];
+      TOS = ~TOS;
       break;
 
     case 48: // ^  ( a b -- a^b ) \ bitwise xor
-      mathStack[1] ^= mathStack[0];
+      NOS ^= TOS;
       popMathStack();
       break;
 
     case 49: // &  ( a b -- a&b ) \ bitwise and
-      mathStack[1] &= mathStack[0];
+      NOS &= TOS;
       popMathStack();
       break;
 
     case 50: // |  ( a b -- a|b ) \bitwise or
-      mathStack[1] |= mathStack[0];
+      NOS |= TOS;
       popMathStack();
       break;
 
@@ -1096,79 +1103,79 @@ void execN(int16_t opcode){
 #if defined(MSP430)
       asm("dint");
       MPYS = popMathStack();
-      OP2 = mathStack[1];
+      OP2 = NOS;
       x = (int32_t)(((int32_t)RESHI << 16) | RESLO);
-      x = (int32_t)(x / mathStack[0]);
-      mathStack[1] = (int16_t)((x >> 16) & 0xffff);
-      mathStack[0] = (int16_t)(x & 0xffff);
+      x = (int32_t)(x / TOS);
+      NOS = (int16_t)((x >> 16) & 0xffff);
+      TOS = (int16_t)(x & 0xffff);
       asm("eint");
 #else
       i = popMathStack();
-      j = mathStack[0];
-      k = mathStack[1];
+      j = TOS;
+      k = NOS;
       x = (int32_t)(j * k);
       x = (int32_t)(x / i);
-      mathStack[1] = (int16_t)((x >> 16) & 0xffff);
-      mathStack[0] = (int16_t)(x & 0xffff);
+      NOS = (int16_t)((x >> 16) & 0xffff);
+      TOS = (int16_t)(x & 0xffff);
 #endif
       break;
       
     case 52: // key  ( -- c ) \ get a key from input .... (wait for it)
-      pushMathStack(uart_getchar());
+      pushMathStack(msp4th_getchar());
       break;
 
     case 53: // cr  ( -- )
-      uart_putchar(0x0D);
-      uart_putchar(0x0A);
+      msp4th_putchar(0x0D);
+      msp4th_putchar(0x0A);
       break;
 
     case 54: // *2  ( a -- a<<1 )
-      mathStack[0] <<= 1;
+      TOS <<= 1;
       break;
 
     case 55: // /2  ( a -- a>>1 )
-      mathStack[0] >>= 1;
+      TOS >>= 1;
       break;
 
     case 56: // call0  ( &func -- *func() )
-      i = mathStack[0];
-      mathStack[0] = (*(int16_t(*)(void)) i) ();
+      i = TOS;
+      TOS = (*(int16_t(*)(void)) i) ();
       break;
 
     case 57: // call1  ( a &func -- *func(a) )
-      i = mathStack[0];
-      j = mathStack[1];
-      mathStack[1] = (*(int16_t(*)(int16_t)) i) (j);
+      i = TOS;
+      j = NOS;
+      NOS = (*(int16_t(*)(int16_t)) i) (j);
       popMathStack();
       break;
 
     case 58: // call2  ( a b &func -- *func(a,b) )
-      i = mathStack[0];
-      j = mathStack[1];
-      k = mathStack[2];
-      mathStack[2] = (*(int16_t(*)(int16_t, int16_t)) i) (k, j);
-      mathStack[0] = 1;
+      i = TOS;
+      j = NOS;
+      k = STACK(2);
+      STACK(2) = (*(int16_t(*)(int16_t, int16_t)) i) (k, j);
+      TOS = 1;
       ndropFunc();
       break;
 
     case 59: // call3  ( a b c &func -- *func(a,b,c) )
-      i = mathStack[0];
-      j = mathStack[1];
-      k = mathStack[2];
-      m = mathStack[3];
-      mathStack[3] = (*(int16_t(*)(int16_t, int16_t, int16_t)) i) (m, k, j);
-      mathStack[0] = 2;
+      i = TOS;
+      j = NOS;
+      k = STACK(2);
+      m = STACK(3);
+      STACK(3) = (*(int16_t(*)(int16_t, int16_t, int16_t)) i) (m, k, j);
+      TOS = 2;
       ndropFunc();
       break;
 
     case 60: // call4  ( a b c d &func -- *func(a,b,c,d) )
-      i = mathStack[0];
-      j = mathStack[1];
-      k = mathStack[2];
-      m = mathStack[3];
-      n = mathStack[4];
-      mathStack[4] = (*(int16_t(*)(int16_t, int16_t, int16_t, int16_t)) i) (n, m, k, j);
-      mathStack[0] = 3;
+      i = TOS;
+      j = NOS;
+      k = STACK(2);
+      m = STACK(3);
+      n = STACK(4);
+      STACK(4) = (*(int16_t(*)(int16_t, int16_t, int16_t, int16_t)) i) (n, m, k, j);
+      TOS = 3;
       ndropFunc();
       break;
 
@@ -1183,37 +1190,37 @@ void execN(int16_t opcode){
 
 
 
-
 void init_msp4th(void)
 {
     uint16_t i;
 
-    printNumber(RAMerrors());
-    uart_puts((uint8_t *)"<-- RAM errors");
-
-
     xit = 0;
 
-    mathStackDepth = 0;
-    addrStackPtr = ADDR_STACK_SIZE;    // this is one past the end !!!! as it should be
+    /*
+     * Get addresses of user-configurable arrays from the pre-known vector
+     * table locations.
+     *
+     * Changing the values in the xStartAddress locations and calling
+     * init_msp4th() again restarts the interpreter with the new layout;
+     */
+    mathStackPtr = (int16_t *)mathStackStartAddress;
+    addrStackPtr = (int16_t *)addrStackStartAddress;
+    prog = (int16_t *)progStartAddress;
+    progOpcodes = (int16_t *)progOpcodesStartAddress;
+    cmdList = (uint8_t *)cmdListStartAddress;
+
+
+
     progCounter = 10000;
-    progPtr = 1;			// this will be the first opcode
-    i=0;
-    cmdListPtr = 0;
-    cmdList[0] = 0;
-    progOpsPtr = 1;      // just skip location zero .... it makes it easy for us
+    progIdx = 1;			// this will be the first opcode
+
+
+    cmdListIdx = 0;
 
     dirMemory = (void *) 0;   // its an array starting at zero
 
-    for (i=0; i < MATH_STACK_SIZE; i++) {
-        mathStack[i] = 0;
-    }
 
-    for (i=0; i < ADDR_STACK_SIZE; i++) {
-        addrStack[i] = 0;
-    }
-
-    lineBufferPtr = 0;
+    lineBufferIdx = 0;
     for (i=0; i < LINE_SIZE; i++) {
         lineBuffer[i] = 0;
     }
@@ -1223,7 +1230,6 @@ void init_msp4th(void)
     }
 
     getLine();
-    //pushMathStack(0);
 }
 
 
@@ -1247,7 +1253,7 @@ void processLoop() // this processes the forth opcodes.
             execN(opcode - 20000);
         } else {
             pushAddrStack(progCounter);
-            progCounter = progOps[opcode];
+            progCounter = progOpcodes[opcode];
         }
     } // while ()
 }

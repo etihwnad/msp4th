@@ -9,8 +9,34 @@
 #include "msp4th.h"
 
 
+
+/*
+ * Assumptions about clocking.  The affected register is the UART0_BCR.  See
+ * "ns430-uart.h" or the ns430 documentation for the relationship between BCR,
+ * the cpu clock rate, and the effective UART baud rate.
+ *
+ * A 12 MHz clock and a desired baudrate of 4800 yields a UARTx_CR value of 155
+ * from the UART_BCR() macro.
+ */
 #define DEVBOARD_CLOCK 12000000L
-#define BAUDRATE 19200L
+#define BAUDRATE 4800L
+
+
+/*
+ * Default msp4th settings
+ */
+#define MATH_STACK_SIZE 32
+#define ADDR_STACK_SIZE 64
+
+//total length of all user programs in opcodes
+#define USER_PROG_SIZE 256
+
+//max number of user-defined words
+#define USER_OPCODE_MAPPING_SIZE 32
+
+//total string length of all word names (+ 1x<space> each)
+#define USER_CMD_LIST_SIZE 128
+
 
 
 /*
@@ -73,6 +99,46 @@ void init_uart(void)
 
 
 
+/*
+ * The ".noinit" section should be placed so these vectors are the last part
+ * of allocated RAM.  All space beyond, up until 0xff00, is empty or unused.
+ * This keeps all the msp4th global variables in RAM in one continuous block.
+ */
+int16_t __attribute__ ((section(".noinit"))) mathStackArray[MATH_STACK_SIZE];
+int16_t __attribute__ ((section(".noinit"))) addrStackArray[ADDR_STACK_SIZE];
+int16_t __attribute__ ((section(".noinit"))) progArray[USER_PROG_SIZE];
+int16_t __attribute__ ((section(".noinit"))) progOpcodesArray[USER_OPCODE_MAPPING_SIZE];
+uint8_t __attribute__ ((section(".noinit"))) cmdListArray[USER_CMD_LIST_SIZE];
+
+void (*msp4th_putchar)(uint8_t);
+uint8_t (*msp4th_getchar)(void);
+void (*msp4th_puts)(uint8_t *);
+
+void config_default_msp4th(void)
+{
+    int16_t i;
+
+    mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
+    addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
+    progStartAddress = &progArray[0];
+    progOpcodesStartAddress = &progOpcodesArray[0];
+    cmdListStartAddress = &cmdListArray[0];
+
+
+    for (i=0; i < MATH_STACK_SIZE; i++) {
+        mathStackArray[i] = 0;
+    }
+
+    for (i=0; i < ADDR_STACK_SIZE; i++) {
+        addrStackArray[i] = 0;
+    }
+
+    msp4th_putchar = &uart_putchar;
+    msp4th_getchar = &uart_getchar;
+    msp4th_puts = &uart_puts;
+}
+
+
 
 int main(void){
     /*
@@ -96,6 +162,8 @@ int main(void){
      *  suffix Nf or Nb.
      */
 #ifdef BOOTROM
+    // set a flag to generate the code with the proper constants
+    // otherwise use the constants setup for testing
     asm(".set BOOTROM, 1");
 #endif
     asm(".include \"flashboot.s\"");
@@ -105,10 +173,18 @@ int main(void){
     init_uart();
 
     /*
-     * Startup and run msp4th interp
+     * Startup and run msp4th interp.
      *
-     * word "exit" makes processLoop() return
+     * See config_default_msp4th() and "test4th.c" for examples of
+     * re-configuring the program vector sizes and providing I/O functions.
+     *
+     * The following make processLoop() return:
+     *  - executing the "exit" word
+     *  - any EOT character in the input ('^D', control-D, 0x04)
+     *  - any 0xff character in the input
      */
+    config_default_msp4th();
+
     while (1) {
         init_msp4th();
         processLoop();
