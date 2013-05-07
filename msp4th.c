@@ -16,18 +16,13 @@
 
 
 #if defined(MSP430)
-/* use devboard uart */
+#include "ns430.h"
 #include "ns430-atoi.h"
-#include "ns430-uart.h"
 
 #else
-/* mixins to test msp4th on PC */
-#include <stdio.h>
+// mixins to test msp4th on PC
 #include <stdint.h>
 typedef uint8_t str_t;
-void uart_putchar(uint8_t c) { putchar(c); }
-uint8_t uart_getchar(void) { return (uint8_t)getchar(); }
-void uart_puts(uint8_t *s) { puts((char *)s); }
 #endif
 
 
@@ -389,24 +384,24 @@ void getLine()
 
     lineBufferIdx = 0;
 
-    uart_putchar('\r');
-    uart_putchar('\n');
-    uart_putchar('>');   // this is our prompt
+    msp4th_putchar('\r');
+    msp4th_putchar('\n');
+    msp4th_putchar('>');   // this is our prompt
 
     waiting = 1;
     while (waiting) {  // just hang in loop until we get CR
-        c = uart_getchar();
+        c = msp4th_getchar();
 
         if ((c == '\b') && (lineBufferIdx > 0)) {
-            uart_putchar('\b');
-            uart_putchar(' ');
-            uart_putchar('\b');
+            msp4th_putchar('\b');
+            msp4th_putchar(' ');
+            msp4th_putchar('\b');
             lineBufferIdx--;
         } else if ( ((c == 255) || (c == '')) && (lineBufferIdx == 0)) {
             xit = 1;
             waiting = 0;
         } else {
-            uart_putchar(c);
+            msp4th_putchar(c);
             if ( (c == '\r') ||
                  (c == '\n') ||
                  (lineBufferIdx >= (LINE_SIZE - 1))) { // prevent overflow of line buffer
@@ -416,7 +411,7 @@ void getLine()
             lineBuffer[lineBufferIdx] = 0;
         }
     }
-    uart_putchar('\n');
+    msp4th_putchar('\n');
     lineBufferIdx = 0;
 }
 
@@ -493,9 +488,9 @@ void getWord(void)
 
 void listFunction()
 {
-    uart_puts((str_t *)cmdListBi);
-    uart_puts((str_t *)cmdListBi2);
-    uart_puts((str_t *)cmdList);
+    msp4th_puts((str_t *)cmdListBi);
+    msp4th_puts((str_t *)cmdListBi2);
+    msp4th_puts((str_t *)cmdList);
 }
 
 
@@ -755,7 +750,7 @@ void printNumber(register int16_t n)
     uint8_t x[7];
 
     if (n < 0) {
-        uart_putchar('-');
+        msp4th_putchar('-');
         nu = -n;
     } else {
         nu = n;
@@ -771,10 +766,10 @@ void printNumber(register int16_t n)
 
     do{
         i = i - 1;
-        uart_putchar(x[i]);
+        msp4th_putchar(x[i]);
     } while (i > 0);
 
-    uart_putchar(' ');
+    msp4th_putchar(' ');
 }
 
 
@@ -784,7 +779,7 @@ void printHexChar(int16_t n){
     n += 7;
   }
   n += '0';
-  uart_putchar(n);
+  msp4th_putchar(n);
 }
 
 
@@ -1025,11 +1020,11 @@ void execN(int16_t opcode){
       break;
 
     case 38: // pwrd  ( -- ) \ print word buffer
-      uart_puts((str_t *)wordBuffer);
+      msp4th_puts((str_t *)wordBuffer);
       break;
 
     case 39: // emit  ( c -- )
-      uart_putchar(popMathStack());
+      msp4th_putchar(popMathStack());
       break;
 
     case 40: // ;  ( pcnt -a- )
@@ -1126,12 +1121,12 @@ void execN(int16_t opcode){
       break;
       
     case 52: // key  ( -- c ) \ get a key from input .... (wait for it)
-      pushMathStack(uart_getchar());
+      pushMathStack(msp4th_getchar());
       break;
 
     case 53: // cr  ( -- )
-      uart_putchar(0x0D);
-      uart_putchar(0x0A);
+      msp4th_putchar(0x0D);
+      msp4th_putchar(0x0A);
       break;
 
     case 54: // *2  ( a -- a<<1 )

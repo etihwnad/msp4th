@@ -98,16 +98,19 @@ int16_t __attribute__ ((section(".noinit"))) progArray[USER_PROG_SIZE];
 int16_t __attribute__ ((section(".noinit"))) progOpcodesArray[USER_OPCODE_MAPPING_SIZE];
 uint8_t __attribute__ ((section(".noinit"))) cmdListArray[USER_CMD_LIST_SIZE];
 
+void (*msp4th_putchar)(uint8_t);
+uint8_t (*msp4th_getchar)(void);
+void (*msp4th_puts)(uint8_t *);
 
 void config_default_msp4th(void)
 {
     int16_t i;
 
-    mathStackStartAddress = (uint16_t)&mathStackArray[MATH_STACK_SIZE - 1];
-    addrStackStartAddress = (uint16_t)&addrStackArray[ADDR_STACK_SIZE - 1];
-    progStartAddress = (uint16_t)&progArray[0];
-    progOpcodesStartAddress = (uint16_t)&progOpcodesArray[0];
-    cmdListStartAddress = (uint16_t)&cmdListArray[0];
+    mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
+    addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
+    progStartAddress = &progArray[0];
+    progOpcodesStartAddress = &progOpcodesArray[0];
+    cmdListStartAddress = &cmdListArray[0];
 
 
     for (i=0; i < MATH_STACK_SIZE; i++) {
@@ -117,6 +120,10 @@ void config_default_msp4th(void)
     for (i=0; i < ADDR_STACK_SIZE; i++) {
         addrStackArray[i] = 0;
     }
+
+    msp4th_putchar = &uart_putchar;
+    msp4th_getchar = &uart_getchar;
+    msp4th_puts = &uart_puts;
 }
 
 

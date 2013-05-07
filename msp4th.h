@@ -2,18 +2,26 @@
 #define __MSP4TH
 
 #if defined(MSP430)
-extern volatile uint16_t mathStackStartAddress asm("__mathStackStartAddress");
-extern volatile uint16_t addrStackStartAddress asm("__addrStackStartAddress");
-extern volatile uint16_t progStartAddress asm("__progStartAddress");
-extern volatile uint16_t progOpcodesStartAddress asm("__progOpcodesStartAddress");
-extern volatile uint16_t cmdListStartAddress asm("__cmdListStartAddress");
+extern volatile int16_t *mathStackStartAddress asm("__mathStackStartAddress");
+extern volatile int16_t *addrStackStartAddress asm("__addrStackStartAddress");
+extern volatile int16_t *progStartAddress asm("__progStartAddress");
+extern volatile int16_t *progOpcodesStartAddress asm("__progOpcodesStartAddress");
+extern volatile uint8_t *cmdListStartAddress asm("__cmdListStartAddress");
 #else
-extern volatile uint16_t mathStackStartAddress;
-extern volatile uint16_t addrStackStartAddress;
-extern volatile uint16_t progStartAddress;
-extern volatile uint16_t progOpcodesStartAddress;
-extern volatile uint16_t cmdListStartAddress;
+extern volatile int16_t *mathStackStartAddress;
+extern volatile int16_t *addrStackStartAddress;
+extern volatile int16_t *progStartAddress;
+extern volatile int16_t *progOpcodesStartAddress;
+extern volatile uint8_t *cmdListStartAddress;
 #endif
+
+/*
+ * Provide definitions for these functions in user code and assign the function
+ * pointer before calling init_msp4th()
+ */
+extern void (*msp4th_putchar)(uint8_t c);
+extern uint8_t (*msp4th_getchar)(void);
+extern void (*msp4th_puts)(uint8_t *s);
 
 void init_msp4th(void);
 void processLoop(void);
