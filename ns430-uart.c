@@ -24,7 +24,7 @@ uint8_t uart_getchar(void)
 } 
 
 
-void uart_puts(str_t *s)
+void uart_puts(uint8_t *s)
 {
     uint16_t i = 0;
     uint8_t c = 1;

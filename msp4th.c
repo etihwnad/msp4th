@@ -28,7 +28,6 @@
 #else
 // mixins to test msp4th on PC
 #include <stdint.h>
-typedef uint8_t str_t;
 #endif
 
 
@@ -310,15 +309,13 @@ const int16_t progBi[] = { // address actually start at 10000
 // our "special" pointer, direct word access to all address space
 volatile int16_t *dirMemory;
 
-// set to 1 to kill program
-int16_t xit;
+int16_t xit; // set to 1 to kill program
 
 uint16_t progCounter;
 
 uint8_t lineBuffer[LINE_SIZE];      /* input line buffer */
-uint16_t lineBufferIdx;             /* input line buffer pointer */
-
-uint8_t wordBuffer[WORD_SIZE];      // just get a word
+uint16_t lineBufferIdx;             /* input line buffer index */
+uint8_t wordBuffer[WORD_SIZE];      /* holds the currently-parsed word */
 
 
 
@@ -354,18 +351,6 @@ uint16_t cmdListIdx;    // next open space for user word strings
 
 
 
-
-static int16_t RAMerrors(void){
-    int16_t errors;
-#if defined(MSP430)
-    __asm__ __volatile__ ( "mov r9, %0\n" : [res] "=r" (errors));
-#else
-    errors = 0;
-#endif
-    return errors;
-}
-
-
 void msp4th_puts(uint8_t *s)
 {
     uint16_t i = 0;
@@ -380,7 +365,8 @@ void msp4th_puts(uint8_t *s)
 }
 
 
-uint8_t getKeyB(){
+uint8_t getKeyB()
+{
     uint8_t c;
 
     c = lineBuffer[lineBufferIdx++];
@@ -504,9 +490,9 @@ void getWord(void)
 
 void listFunction()
 {
-    msp4th_puts((str_t *)cmdListBi);
-    msp4th_puts((str_t *)cmdListBi2);
-    msp4th_puts((str_t *)cmdList);
+    msp4th_puts((uint8_t *)cmdListBi);
+    msp4th_puts((uint8_t *)cmdListBi2);
+    msp4th_puts((uint8_t *)cmdList);
 }
 
 
@@ -567,12 +553,15 @@ void ndropFunc(void)
 }
 
 
-int16_t lookupToken(uint8_t *x, uint8_t *l){    // looking for x in l
+int16_t lookupToken(uint8_t *x, uint8_t *l) // looking for x in l
+{
   int16_t i,j,k,n;
+
+  i = 0;
   j = 0;
   k = 0;
-  n=1;
-  i=0;
+  n = 1;
+
   while(l[i] != 0){
     if(x[j] != 0){   
       // we expect the next char to match
@@ -613,7 +602,8 @@ int16_t lookupToken(uint8_t *x, uint8_t *l){    // looking for x in l
 }
 
 
-void luFunc(){
+void luFunc()
+{
   int16_t i;
   
   i = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
@@ -992,8 +982,7 @@ void execN(int16_t opcode){
       }
       break;    
 
-    case 27: // eram  ( -- nRAMerrors )
-      pushMathStack(RAMerrors());
+    case 27: // eram  ( -- ) \ UNUSED NOP
       break;
       
     case 28: // .h  ( a -- )
@@ -1036,7 +1025,7 @@ void execN(int16_t opcode){
       break;
 
     case 38: // pwrd  ( -- ) \ print word buffer
-      msp4th_puts((str_t *)wordBuffer);
+      msp4th_puts((uint8_t *)wordBuffer);
       break;
 
     case 39: // emit  ( c -- )

@@ -8,6 +8,4 @@ typedef signed int int16_t;
 typedef unsigned long uint32_t;
 typedef signed long int32_t;
 
-typedef __attribute__((aligned (2))) uint8_t str_t;
-
 #endif
