@@ -102,7 +102,9 @@
     mov     #0x00f0,&SPI0_CR
 
 ;delay for a bit, the flash needs minimum 30us to arrive in active/idle mode
-    mov     #0xffff,   r5
+; this delay count is roughly 30us for a MCLK of 100 MHz and thence plenty
+; sufficient for any slower clock
+    mov     #1500,  r5
 2:
     dec     r5
     jnz     2b
@@ -112,20 +114,8 @@
     mov     #0,     &CRCINIRES
 
 
-/*
-;check state of PA.9 (aka I2C SCL)
-;r13 holds the flag
-; PA.9 low -> do not byteswap
-; PA.9 high -> byteswap words from flash
-    clr     r13             
-    bit     #0x0200,&PADSR
-    jz      3f
-    mov     #1,     r13
-3:
-*/
-
 ;r7 holds start of RAM address
-;r8 (end of RAM)+1
+;r8 (last address of RAM)+1
 .ifdef BOOTROM
     mov     #RAMStart,r7
     mova    #(RAMStart+RAMSize),r8
