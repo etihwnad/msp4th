@@ -84,7 +84,7 @@ const uint8_t cmdListBi[] =
               "> == .hb gw dfn "                    // 11 -> 15
               "keyt , p@ p! not "                   // 16 -> 20
               "list if then else begin "            // 21 -> 25
-              "until eram .h ] num "                // 26 -> 30
+              "until depth .h ] num "               // 26 -> 30
               "push0 goto exec lu pushn "           // 31 -> 35
               "over push1 pwrd emit ; "             // 36 -> 40
               "@ ! h@ do loop "                     // 41 -> 45
@@ -932,7 +932,7 @@ void execN(int16_t opcode){
       pushMathStack(i);
       break;
 
-    case 17: // allot  ( opcode -- ) \ push opcode to prog space
+    case 17: // ,  ( opcode -- ) \ push opcode to prog space
       prog[progIdx++] = popMathStack();
       break;
 
@@ -982,7 +982,8 @@ void execN(int16_t opcode){
       }
       break;    
 
-    case 27: // eram  ( -- ) \ UNUSED NOP
+    case 27: // depth  ( -- n ) \ math stack depth
+      pushMathStack((int16_t *)mathStackStartAddress - mathStackPtr);
       break;
       
     case 28: // .h  ( a -- )
@@ -1052,6 +1053,8 @@ void execN(int16_t opcode){
     case 43: // h@  ( -- prog ) \ end of program code space
       pushMathStack(progIdx);
       break;
+
+    //////// end of words used in progBi[] ///////////////////////////////////
 
     case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
       i = popMathStack();  // start of count
