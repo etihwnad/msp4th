@@ -21,7 +21,6 @@ extern volatile uint8_t *cmdListStartAddress;
  */
 extern void (*msp4th_putchar)(uint8_t c);
 extern uint8_t (*msp4th_getchar)(void);
-extern void (*msp4th_puts)(uint8_t *s);
 
 void init_msp4th(void);
 void processLoop(void);

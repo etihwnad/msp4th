@@ -112,7 +112,7 @@ uint8_t __attribute__ ((section(".noinit"))) cmdListArray[USER_CMD_LIST_SIZE];
 
 void (*msp4th_putchar)(uint8_t);
 uint8_t (*msp4th_getchar)(void);
-void (*msp4th_puts)(uint8_t *);
+
 
 void config_default_msp4th(void)
 {
@@ -135,7 +135,6 @@ void config_default_msp4th(void)
 
     msp4th_putchar = &uart_putchar;
     msp4th_getchar = &uart_getchar;
-    msp4th_puts = &uart_puts;
 }
 
 

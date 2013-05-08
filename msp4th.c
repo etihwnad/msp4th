@@ -2,9 +2,15 @@
  *
  * TODO:
  *  - use enum for VM opcodes
- *  - speed up pop/pushMathStack (need bounds check??)
- *  - UART usage is blocking, convert to interrupt-based
- *  - allow configurable user-code space
+ *
+ *  X speed up pop/pushMathStack (need bounds check??)
+ *      only bounds check is for mathStack underflow
+ *
+ *  X UART usage is blocking, convert to interrupt-based
+ *      user may provide msp4th_{putchar,getchar} function pointers
+ *      the default one remains blocking
+ *
+ *  X allow configurable user-code space
  *      mathStack[], addrStack[]
  *      prog[], cmdList[], progOpcodes[]
  *      array locations come from a vector table instead of hard-coded
@@ -29,7 +35,6 @@ typedef uint8_t str_t;
 #include "msp4th.h"
 
 
-#define ALIGN_2 __attribute__ ((aligned (2)))
 
 /* 
  * Hard-coded constants
@@ -101,7 +106,7 @@ const int16_t cmdList2N[] = {0,10000,10032,10135};  // need an extra zero at the
 
 // to flag the initial built in functions from the rest, save the negative of them in the program space (prog).
 
-const int16_t ALIGN_2 progBi[] = { // address actually start at 10000
+const int16_t progBi[] = { // address actually start at 10000
 
    // this is the monitor in compiled forth code (by hand)
 
@@ -315,14 +320,13 @@ uint16_t lineBufferIdx;             /* input line buffer pointer */
 
 uint8_t wordBuffer[WORD_SIZE];      // just get a word
 
+
+
 /* The following utilize a vector table to allow re-configuring the
  * location/size of these arrays.  Then the stack sizes and user program space
  * sizes can be (re-)specified by changing the table and calling init_msp4th()
  * again.
  */
-
-
-
 #if defined(MSP430)
 int16_t register *mathStackPtr asm("r6");
 #else
@@ -345,8 +349,6 @@ uint8_t *cmdList;       // string of user defined word names
 uint16_t cmdListIdx;    // next open space for user word strings
 
 
-// TODO re-defined
-
 
 
 
@@ -361,6 +363,20 @@ static int16_t RAMerrors(void){
     errors = 0;
 #endif
     return errors;
+}
+
+
+void msp4th_puts(uint8_t *s)
+{
+    uint16_t i = 0;
+    uint8_t c = 1;
+
+    while (c != 0) {
+        c = s[i++];
+        msp4th_putchar(c);
+    }
+    msp4th_putchar('\r');
+    msp4th_putchar('\n');
 }
 
 

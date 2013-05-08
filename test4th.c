@@ -4,9 +4,6 @@
 
 #include "msp4th.h"
 
-void (*msp4th_putchar)(uint8_t);
-uint8_t (*msp4th_getchar)(void);
-void (*msp4th_puts)(uint8_t *);
 
 
 #define MATH_STACK_SIZE 32
@@ -27,6 +24,9 @@ volatile int16_t *progStartAddress;
 volatile int16_t *progOpcodesStartAddress;
 volatile uint8_t *cmdListStartAddress;
 
+void (*msp4th_putchar)(uint8_t);
+uint8_t (*msp4th_getchar)(void);
+
 
 
 void my_putchar(uint8_t c)
@@ -40,11 +40,6 @@ uint8_t my_getchar(void)
     return (uint8_t)getchar();
 }
 
-
-void my_puts(uint8_t *s)
-{
-    puts((char *)s);
-}
 
 
 
@@ -68,7 +63,6 @@ void config_msp4th(void)
 
     msp4th_putchar = &my_putchar;
     msp4th_getchar = &my_getchar;
-    msp4th_puts = &my_puts;
 }
 
 
