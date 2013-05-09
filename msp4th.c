@@ -81,10 +81,10 @@ void execFunc(void);
 const uint8_t cmdListBi[] = 
              {"exit + - * / "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
-              "> == .hb gw dfn "                    // 11 -> 15
-              "keyt , p@ p! not "                   // 16 -> 20
+              "> == hb. gw dfn "                    // 11 -> 15
+              "abs , p@ p! not "                    // 16 -> 20
               "list if then else begin "            // 21 -> 25
-              "until depth .h ] num "               // 26 -> 30
+              "until depth h. ] num "               // 26 -> 30
               "push0 goto exec lu pushn "           // 31 -> 35
               "over push1 pwrd emit ; "             // 36 -> 40
               "@ ! h@ do loop "                     // 41 -> 45
@@ -92,8 +92,10 @@ const uint8_t cmdListBi[] =
               "^ & | */ key "                       // 51 -> 55
               "cr 2* 2/ call0 call1 "               // 56 -> 60
               "call2 call3 call4 ndrop swpb "       // 61 -> 65
+              "+! roll pick tuck max "              // 66 -> 70
+              "min s. sh. neg mod "                 // 71 -> 75
              };
-#define LAST_PREDEFINED 65	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 75	// update this when we add commands to the built in list
 
 
 // these commands are interps
@@ -734,6 +736,23 @@ void loopFunc(int16_t n)
 }
 
 
+void rollFunc(int16_t n)
+{
+    int16_t *addr;
+    int16_t tmp;
+
+    tmp = STACK(n);
+    addr = (mathStackPtr + n);
+
+    while (addr > mathStackPtr) {
+        *addr = *(addr - 1);
+        addr--;
+    }
+
+    TOS = tmp;
+}
+
+
 void pushnFunc(){
   int16_t i;
   if(progCounter > 9999){
@@ -934,6 +953,7 @@ void execN(int16_t opcode){
 
     case 13: // .hb  ( a -- )
       printHexByte(popMathStack());
+      msp4th_putchar(' ');
       break;
 
     case 14: // gw  ( -- ) \ get word from input
@@ -944,12 +964,10 @@ void execN(int16_t opcode){
       dfnFunc();
       break;
 
-    case 16: // keyt  ( -- flag )
-      // TODO: for interrupt-based UART I/O
-      // return a 1 if keys are in ring buffer
-      //i = (inputRingPtrXin - inputRingPtrXout) & 0x0F;    // logical result assigned to i
-      i = 0;
-      pushMathStack(i);
+    case 16: // abs  ( a -- |a| ) \ -32768 is unchanged
+      if (TOS < 0) {
+          TOS = ~TOS + 1;
+      }
       break;
 
     case 17: // ,  ( opcode -- ) \ push opcode to prog space
@@ -1008,6 +1026,7 @@ void execN(int16_t opcode){
       
     case 28: // .h  ( a -- )
       printHexWord(popMathStack());
+      msp4th_putchar(' ');
       break;
 
     case 29: // ] ( trapped in interp )
@@ -1158,11 +1177,11 @@ void execN(int16_t opcode){
       msp4th_putchar(0x0A);
       break;
 
-    case 57: // *2  ( a -- a<<1 )
+    case 57: // 2*  ( a -- a<<1 )
       TOS <<= 1;
       break;
 
-    case 58: // /2  ( a -- a>>1 )
+    case 58: // 2/  ( a -- a>>1 )
       TOS >>= 1;
       break;
 
@@ -1218,6 +1237,74 @@ void execN(int16_t opcode){
 #else
       TOS = ((TOS >> 8) & 0x00ff) | ((TOS << 8) & 0xff00);
 #endif
+      break;
+
+    case 66: // +!  ( n addr -- ) \ *addr += n
+      i = popMathStack();
+      j = popMathStack();
+      *(int16_t *)i += j;
+      break;
+
+    case 67: // roll  ( n -- ) \ nth stack removed and placed on top
+      rollFunc(popMathStack());
+      break;
+
+    case 68: // pick  ( n -- ) \ nth stack copied to top
+      i = popMathStack();
+      pushMathStack(STACK(i));
+      break;
+
+    case 69: // tuck  ( a b -- b a b ) \ insert copy TOS to after NOS
+      i = NOS;
+      pushMathStack(TOS);
+      STACK(2) = TOS;
+      NOS = i;
+      break;
+
+    case 70: // max  ( a b -- c ) \ c = a ? a>b : b
+      i = popMathStack();
+      if (i > TOS) {
+          TOS = i;
+      }
+      break;
+
+    case 71: // min  ( a b -- c ) \ c = a ? a<b : b
+      i = popMathStack();
+      if (i < TOS) {
+          TOS = i;
+      }
+      break;
+
+    case 72: // s.  ( -- ) \ print stack contents, TOS on right
+      { // addr is strictly local to this block
+          int16_t *addr;
+          addr = (int16_t *)mathStackStartAddress;
+          while (addr >= mathStackPtr) {
+              printNumber(*addr);
+              addr--;
+          }
+      }
+      break;
+
+    case 73: // sh.  ( -- ) \ print stack contents in hex, TOS on right
+      { // addr is strictly local to this block
+          int16_t *addr;
+          addr = (int16_t *)mathStackStartAddress;
+          while (addr >= mathStackPtr) {
+              printHexWord(*addr);
+              msp4th_putchar(' ');
+              addr--;
+          }
+      }
+      break;
+
+    case 74: // neg  ( a -- -a ) \ twos complement
+      TOS *= -1;
+      break;
+
+    case 75: // mod  ( a b -- a%b )
+      NOS = TOS % NOS;
+      popMathStack();
       break;
 
     default:
