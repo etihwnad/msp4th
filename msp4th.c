@@ -88,12 +88,12 @@ const uint8_t cmdListBi[] =
               "push0 goto exec lu pushn "           // 31 -> 35
               "over push1 pwrd emit ; "             // 36 -> 40
               "@ ! h@ do loop "                     // 41 -> 45
-              "i ~ ^ & | "                          // 46 -> 50
-              "*/ key cr *2 /2 "                    // 51 -> 55
-              "call0 call1 call2 call3 call4 "      // 56 -> 60
-              "ndrop "                              // 61 -> 61
+              "+loop i j k ~ "                      // 46 -> 50
+              "^ & | */ key "                       // 51 -> 55
+              "cr 2* 2/ call0 call1 "               // 56 -> 60
+              "call2 call3 call4 ndrop swpb "       // 61 -> 65
              };
-#define LAST_PREDEFINED 61	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 65	// update this when we add commands to the built in list
 
 
 // these commands are interps
@@ -714,6 +714,26 @@ void ifFunc(int16_t x){     // used as goto if x == 1
 }
 
 
+void loopFunc(int16_t n)
+{
+    int16_t j, k, m;
+
+    j = popAddrStack();  // loop address
+    k = popAddrStack();  // count
+    m = popAddrStack();  // limit
+    k = k + n;           // up the count
+
+    if ( ! (   ((n > 0) && (k >= m))
+            || ((n < 0) && (k <= m)))) {
+        // put it all back and loop
+        pushAddrStack(m);
+        pushAddrStack(k);
+        pushAddrStack(j);
+        progCounter = j;
+    }
+}
+
+
 void pushnFunc(){
   int16_t i;
   if(progCounter > 9999){
@@ -1067,47 +1087,48 @@ void execN(int16_t opcode){
       break;
 
     case 45: // loop  ( -- ) ( limit cnt pcnt -a- | limit cnt+1 pcnt )
-      j = popAddrStack();  // loop address
-      k = popAddrStack();  // count
-      m = popAddrStack();  // limit
-      k = k + 1;           // up the count
-      if(k >= m){
-        // we are done
-      } else {
-        // put it all back and loop
-        pushAddrStack(m);
-        pushAddrStack(k);
-        pushAddrStack(j);
-        progCounter = j;
-
-      }
-      break;
-      
-    case 46: // i  ( -- cnt ) \ loop counter value
-      j = ANOS;
-      pushMathStack(j);
+      loopFunc(1);
       break;
 
-    case 47: // ~  ( a -- ~a ) \ bitwise complement
+    case 46: // +loop  ( n -- ) ( limit cnt pcnt -a- | limit cnt+n pcnt ) \ decrement loop if n<0
+      loopFunc(popMathStack());
+      break;
+
+    case 47: // i  ( -- cnt ) \ loop counter value
+      i = ANOS;
+      pushMathStack(i);
+      break;
+
+    case 48: // j  ( -- cnt ) \ next outer loop counter value
+      i = ASTACK(4);
+      pushMathStack(i);
+      break;
+
+    case 49: // k  ( -- cnt ) \ next next outer loop counter value
+      i = ASTACK(7);
+      pushMathStack(i);
+      break;
+
+    case 50: // ~  ( a -- ~a ) \ bitwise complement
       TOS = ~TOS;
       break;
 
-    case 48: // ^  ( a b -- a^b ) \ bitwise xor
+    case 51: // ^  ( a b -- a^b ) \ bitwise xor
       NOS ^= TOS;
       popMathStack();
       break;
 
-    case 49: // &  ( a b -- a&b ) \ bitwise and
+    case 52: // &  ( a b -- a&b ) \ bitwise and
       NOS &= TOS;
       popMathStack();
       break;
 
-    case 50: // |  ( a b -- a|b ) \bitwise or
+    case 53: // |  ( a b -- a|b ) \bitwise or
       NOS |= TOS;
       popMathStack();
       break;
 
-    case 51: // */  ( a b c -- reshi reslo ) \ (a*b)/c scale function
+    case 54: // */  ( a b c -- reshi reslo ) \ (a*b)/c scale function
 #if defined(MSP430)
       asm("dint");
       MPYS = popMathStack();
@@ -1128,36 +1149,36 @@ void execN(int16_t opcode){
 #endif
       break;
       
-    case 52: // key  ( -- c ) \ get a key from input .... (wait for it)
+    case 55: // key  ( -- c ) \ get a key from input .... (wait for it)
       pushMathStack(msp4th_getchar());
       break;
 
-    case 53: // cr  ( -- )
+    case 56: // cr  ( -- )
       msp4th_putchar(0x0D);
       msp4th_putchar(0x0A);
       break;
 
-    case 54: // *2  ( a -- a<<1 )
+    case 57: // *2  ( a -- a<<1 )
       TOS <<= 1;
       break;
 
-    case 55: // /2  ( a -- a>>1 )
+    case 58: // /2  ( a -- a>>1 )
       TOS >>= 1;
       break;
 
-    case 56: // call0  ( &func -- *func() )
+    case 59: // call0  ( &func -- *func() )
       i = TOS;
       TOS = (*(int16_t(*)(void)) i) ();
       break;
 
-    case 57: // call1  ( a &func -- *func(a) )
+    case 60: // call1  ( a &func -- *func(a) )
       i = TOS;
       j = NOS;
       NOS = (*(int16_t(*)(int16_t)) i) (j);
       popMathStack();
       break;
 
-    case 58: // call2  ( a b &func -- *func(a,b) )
+    case 61: // call2  ( a b &func -- *func(a,b) )
       i = TOS;
       j = NOS;
       k = STACK(2);
@@ -1166,7 +1187,7 @@ void execN(int16_t opcode){
       ndropFunc();
       break;
 
-    case 59: // call3  ( a b c &func -- *func(a,b,c) )
+    case 62: // call3  ( a b c &func -- *func(a,b,c) )
       i = TOS;
       j = NOS;
       k = STACK(2);
@@ -1176,7 +1197,7 @@ void execN(int16_t opcode){
       ndropFunc();
       break;
 
-    case 60: // call4  ( a b c d &func -- *func(a,b,c,d) )
+    case 63: // call4  ( a b c d &func -- *func(a,b,c,d) )
       i = TOS;
       j = NOS;
       k = STACK(2);
@@ -1187,8 +1208,16 @@ void execN(int16_t opcode){
       ndropFunc();
       break;
 
-    case 61: // ndrop  ( (x)*n n -- )  drop n math stack cells
+    case 64: // ndrop  ( (x)*n n -- ) \ drop n math stack cells
       ndropFunc();
+      break;
+
+    case 65: // swpb  ( n -- n ) \ byteswap TOS
+#if defined(MSP430)
+      asm("swpb %[s]\n":  : [s] "m" (TOS) :);
+#else
+      TOS = ((TOS >> 8) & 0x00ff) | ((TOS << 8) & 0xff00);
+#endif
       break;
 
     default:
