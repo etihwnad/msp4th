@@ -37,6 +37,12 @@
 //total string length of all word names (+ 1x<space> each)
 #define USER_CMD_LIST_SIZE 128
 
+//maximum input line length
+#define LINE_BUFFER_SIZE 128
+
+//maximum word character width
+#define WORD_BUFFER_SIZE 32
+
 
 
 /*
@@ -81,7 +87,7 @@ static void __inline__ eint(void){
 
 
 
-void init_uart(void)
+static __inline__ void init_uart(void)
 {
     int16_t tmp;
     // chip setup for UART0 use
@@ -109,20 +115,26 @@ int16_t __attribute__ ((section(".noinit"))) addrStackArray[ADDR_STACK_SIZE];
 int16_t __attribute__ ((section(".noinit"))) progArray[USER_PROG_SIZE];
 int16_t __attribute__ ((section(".noinit"))) progOpcodesArray[USER_OPCODE_MAPPING_SIZE];
 uint8_t __attribute__ ((section(".noinit"))) cmdListArray[USER_CMD_LIST_SIZE];
+uint8_t __attribute__ ((section(".noinit"))) lineBufferArray[LINE_BUFFER_SIZE];
+uint8_t __attribute__ ((section(".noinit"))) wordBufferArray[WORD_BUFFER_SIZE];
 
 void (*msp4th_putchar)(uint8_t);
 uint8_t (*msp4th_getchar)(void);
 
 
-void config_default_msp4th(void)
+static __inline__ void config_default_msp4th(void)
 {
     int16_t i;
 
-    mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
-    addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
-    progStartAddress = &progArray[0];
-    progOpcodesStartAddress = &progOpcodesArray[0];
-    cmdListStartAddress = &cmdListArray[0];
+    msp4th_mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
+    msp4th_addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
+    msp4th_prog = &progArray[0];
+    msp4th_progOpcodes = &progOpcodesArray[0];
+    msp4th_cmdList = &cmdListArray[0];
+    msp4th_lineBuffer = &lineBufferArray[0];
+    msp4th_lineBufferLength = LINE_BUFFER_SIZE;
+    msp4th_wordBuffer = &wordBufferArray[0];
+    msp4th_wordBufferLength = WORD_BUFFER_SIZE;
 
 
     for (i=0; i < MATH_STACK_SIZE; i++) {
@@ -132,6 +144,9 @@ void config_default_msp4th(void)
     for (i=0; i < ADDR_STACK_SIZE; i++) {
         addrStackArray[i] = 0;
     }
+
+    lineBufferArray[0] = 0;
+    wordBufferArray[0] = 0;
 
     msp4th_putchar = &uart_putchar;
     msp4th_getchar = &uart_getchar;
@@ -168,7 +183,6 @@ int main(void){
     asm(".include \"flashboot.s\"");
 
 
-    dint();
     init_uart();
 
     /*
@@ -182,9 +196,8 @@ int main(void){
      *  - any EOT character in the input ('^D', control-D, 0x04)
      *  - any 0xff character in the input
      */
-    config_default_msp4th();
-
     while (1) {
+        config_default_msp4th();
         init_msp4th();
         processLoop();
     }

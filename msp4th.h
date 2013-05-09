@@ -2,17 +2,25 @@
 #define __MSP4TH
 
 #if defined(MSP430)
-extern volatile int16_t *mathStackStartAddress asm("__mathStackStartAddress");
-extern volatile int16_t *addrStackStartAddress asm("__addrStackStartAddress");
-extern volatile int16_t *progStartAddress asm("__progStartAddress");
-extern volatile int16_t *progOpcodesStartAddress asm("__progOpcodesStartAddress");
-extern volatile uint8_t *cmdListStartAddress asm("__cmdListStartAddress");
+extern int16_t *msp4th_mathStackStartAddress asm("__msp4th_mathStackStartAddress");
+extern int16_t *msp4th_addrStackStartAddress asm("__msp4th_addrStackStartAddress");
+extern int16_t *msp4th_prog asm("__msp4th_prog");
+extern int16_t *msp4th_progOpcodes asm("__msp4th_progOpcodes");
+extern uint8_t *msp4th_cmdList asm("__msp4th_cmdList");
+extern uint8_t *msp4th_lineBuffer asm("__msp4th_lineBuffer");
+extern int16_t msp4th_lineBufferLength asm("__msp4th_lineBufferLength");
+extern uint8_t *msp4th_wordBuffer asm("__msp4th_wordBuffer");
+extern int16_t msp4th_wordBufferLength asm("__msp4th_wordBufferLength");
 #else
-extern volatile int16_t *mathStackStartAddress;
-extern volatile int16_t *addrStackStartAddress;
-extern volatile int16_t *progStartAddress;
-extern volatile int16_t *progOpcodesStartAddress;
-extern volatile uint8_t *cmdListStartAddress;
+extern int16_t *msp4th_mathStackStartAddress;
+extern int16_t *msp4th_addrStackStartAddress;
+extern int16_t *msp4th_prog;
+extern int16_t *msp4th_progOpcodes;
+extern uint8_t *msp4th_cmdList;
+extern uint8_t *msp4th_lineBuffer;
+extern int16_t msp4th_lineBufferLength;
+extern uint8_t *msp4th_wordBuffer;
+extern int16_t msp4th_wordBufferLength;
 #endif
 
 /*

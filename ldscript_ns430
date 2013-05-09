@@ -219,11 +219,15 @@ SECTIONS
    PROVIDE (__data_end_rom   = _etext + SIZEOF (.data));
 }
 /* hard-coded addresses for on-line re-sizing of the msp4th arrays */
-__mathStackStartAddress     = 0xff00;
-__addrStackStartAddress     = 0xff02;
-__progStartAddress          = 0xff04;
-__progOpcodesStartAddress   = 0xff06;
-__cmdListStartAddress       = 0xff08;
+__msp4th_mathStackStartAddress     = 0xff00;
+__msp4th_addrStackStartAddress     = 0xff02;
+__msp4th_prog                      = 0xff04;
+__msp4th_progOpcodes               = 0xff06;
+__msp4th_cmdList                   = 0xff08;
+__msp4th_lineBuffer                = 0xff0a;
+__msp4th_lineBufferLength          = 0xff0c;
+__msp4th_wordBuffer                = 0xff0e;
+__msp4th_wordBufferLength          = 0xff10;
 
 __PC_AFTER_RESET = 0x3000;
 __CRCDI = 0x0000;
