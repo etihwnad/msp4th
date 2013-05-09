@@ -145,6 +145,14 @@ static __inline__ void config_default_msp4th(void)
         addrStackArray[i] = 0;
     }
 
+    /* example initial line to execute
+    uint8_t *str = (uint8_t *)"1 2 3 4 5 s.\r";
+    for (i=0; i < 14; i++) {
+        lineBufferArray[i] = str[i];
+        lineBufferArray[i+1] = 0;
+    }
+    */
+
     lineBufferArray[0] = 0;
     wordBufferArray[0] = 0;
 
