@@ -83,7 +83,7 @@ void execFunc(void);
 // The order matches the execN function and determines the opcode value.
 // NOTE: must end in a space !!!!
 const uint8_t cmdListBi[] = {
-              "exit + - * / "                       // 1 -> 5
+              "bye + - * /% "                       // 1 -> 5
               ". dup drop swap < "                  // 6 -> 10
               "> == hb. gw dfn "                    // 11 -> 15
               "abs , p@ p! not "                    // 16 -> 20
@@ -97,10 +97,9 @@ const uint8_t cmdListBi[] = {
               "cr 2* 2/ call0 call1 "               // 56 -> 60
               "call2 call3 call4 ndrop swpb "       // 61 -> 65
               "+! roll pick tuck max "              // 66 -> 70
-              "min s. sh. neg mod "                 // 71 -> 75
-              "echo "                               // 76 -> 76
+              "min s. sh. neg echo "                // 71 -> 75
              };
-#define LAST_PREDEFINED 76	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 75	// update this when we add commands to the built in list
 
 
 // these commands are interps
@@ -882,7 +881,7 @@ void execN(int16_t opcode){
     case  0: // unused
       break;
 
-    case  1: // exit
+    case  1: // bye
       xit = 1;
       break;
 
@@ -911,9 +910,25 @@ void execN(int16_t opcode){
 #endif
       break;
 
-    case  5: // /  ( a b -- a/b )
-      NOS = NOS / TOS;
-      popMathStack();
+    case  5: // /%  ( a b -- a/b a%b )
+#if defined(MSP430)
+      /* directly call divmodhi4, gcc calls it twice even though the fn returns
+       * both values in one call */
+      asm("mov 2(%[ms]), r12\n"
+          "mov 0(%[ms]), r10\n"
+          "call #__divmodhi4\n"
+          "mov r12, 2(%[ms])\n"
+          "mov r14, 0(%[ms])\n"
+          : /* outputs */
+          : [ms] "r" (mathStackPtr) /* inputs */
+          : /* clobbers */
+         );
+#else
+      i = NOS;
+      j = TOS;
+      NOS = i / j;
+      TOS = i % j;
+#endif
       break;
 
     case  6: // .  ( a -- )
@@ -1243,7 +1258,7 @@ void execN(int16_t opcode){
 
     case 65: // swpb  ( n -- n ) \ byteswap TOS
 #if defined(MSP430)
-      asm("swpb %[s]\n":  : [s] "m" (TOS) :);
+      asm("swpb %[s]\n":  : [s] "r" (mathStackPtr) :);
 #else
       TOS = ((TOS >> 8) & 0x00ff) | ((TOS << 8) & 0xff00);
 #endif
@@ -1312,12 +1327,7 @@ void execN(int16_t opcode){
       TOS *= -1;
       break;
 
-    case 75: // mod  ( a b -- a%b )
-      NOS = TOS % NOS;
-      popMathStack();
-      break;
-
-    case 76: // echo  ( bool -- ) \ ?echo prompts and terminal input?
+    case 75: // echo  ( bool -- ) \ ?echo prompts and terminal input?
       echo = popMathStack();
 
     default:
