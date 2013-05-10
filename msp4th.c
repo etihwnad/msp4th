@@ -1172,23 +1172,23 @@ void execN(int16_t opcode){
       popMathStack();
       break;
 
-    case 54: // */  ( a b c -- reshi reslo ) \ (a*b)/c scale function
+    case 54: // */  ( a b c -- (a*b)/c ) \ 32b intermediate
 #if defined(MSP430)
       asm("dint");
       MPYS = popMathStack();
       OP2 = NOS;
-      x = (int32_t)(((int32_t)RESHI << 16) | RESLO);
-      x = (int32_t)(x / TOS);
-      NOS = (int16_t)((x >> 16) & 0xffff);
+      x = (((int32_t)RESHI << 16) | RESLO);
+      x = (x / TOS);
+      popMathStack();
       TOS = (int16_t)(x & 0xffff);
       asm("eint");
 #else
       i = popMathStack();
       j = TOS;
       k = NOS;
-      x = (int32_t)(j * k);
-      x = (int32_t)(x / i);
-      NOS = (int16_t)((x >> 16) & 0xffff);
+      x = j * k;
+      x = x / i;
+      popMathStack();
       TOS = (int16_t)(x & 0xffff);
 #endif
       break;
