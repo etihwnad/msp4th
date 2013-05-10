@@ -331,20 +331,27 @@ int16_t cmdListIdx;    // next open space for user word strings
  */
 #if defined(MSP430)
 int16_t register *mathStackPtr asm("r6");
-#else
-int16_t *mathStackPtr;
-#endif
-
-#if defined(MSP430)
 int16_t register *addrStackPtr asm("r7");
 #else
+int16_t *mathStackPtr;
 int16_t *addrStackPtr;
 #endif
 
 int16_t *prog;          // user programs (opcodes) are placed here
 
-//int16_t *progOpcodes;   // mapping between user word index and program opcodes
+int16_t *progOpcodes;   // mapping between user word index and program opcodes
                         // start index into prog[]
+
+uint8_t *cmdList;
+uint8_t *lineBuffer;
+int16_t lineBufferLength;
+uint8_t *wordBuffer;
+int16_t wordBufferLength;
+void (*msp4th_putchar)(uint8_t c);
+uint8_t (*msp4th_getchar)(void);
+
+struct msp4th_config *config;
+
 
 
 
@@ -372,10 +379,10 @@ uint8_t getKeyB()
 {
     uint8_t c;
 
-    c = msp4th_lineBuffer[lineBufferIdx++];
+    c = lineBuffer[lineBufferIdx++];
     if (c == 0) {
         getLine();
-        c = msp4th_lineBuffer[lineBufferIdx++];
+        c = lineBuffer[lineBufferIdx++];
     }
 
     return (c);
@@ -407,8 +414,8 @@ void getLine()
         } else if ( ((c == 255) || (c == '')) && (lineBufferIdx == 0)) {
             xit = 1;
             waiting = 0;
-            msp4th_lineBuffer[lineBufferIdx++] = 'x';
-            msp4th_lineBuffer[lineBufferIdx] = ' ';
+            lineBuffer[lineBufferIdx++] = 'x';
+            lineBuffer[lineBufferIdx] = ' ';
         } else {
             if (echo) {
                 msp4th_putchar(c);
@@ -416,15 +423,15 @@ void getLine()
 
             if ( (c == '\r') ||
                  (c == '\n') ||
-                 (lineBufferIdx >= (msp4th_lineBufferLength - 1))) { // prevent overflow of line buffer
+                 (lineBufferIdx >= (lineBufferLength - 1))) { // prevent overflow of line buffer
 
                 waiting = 0;
 
                 if (echo) { msp4th_putchar('\n'); }
             }
 
-            msp4th_lineBuffer[lineBufferIdx++] = c;
-            msp4th_lineBuffer[lineBufferIdx] = 0;
+            lineBuffer[lineBufferIdx++] = c;
+            lineBuffer[lineBufferIdx] = 0;
         }
     }
 
@@ -486,10 +493,10 @@ void getWord(void)
     }
 
     do {
-        msp4th_wordBuffer[k++] = c;
-        msp4th_wordBuffer[k] = 0;
+        wordBuffer[k++] = c;
+        wordBuffer[k] = 0;
         c = getKeyB();
-    } while ((c > ' ') && (k < msp4th_wordBufferLength));
+    } while ((c > ' ') && (k < wordBufferLength));
 }
 
 
@@ -497,7 +504,7 @@ void listFunction()
 {
     msp4th_puts((uint8_t *)cmdListBi);
     msp4th_puts((uint8_t *)cmdListBi2);
-    msp4th_puts((uint8_t *)msp4th_cmdList);
+    msp4th_puts((uint8_t *)cmdList);
 }
 
 
@@ -512,7 +519,7 @@ int16_t popMathStack(void)
     i = *mathStackPtr;
 
     // prevent stack under-flow
-    if (mathStackPtr < (int16_t *)msp4th_mathStackStartAddress) {
+    if (mathStackPtr < (int16_t *)config->mathStackStartAddress) {
         mathStackPtr++;
     }
 
@@ -611,7 +618,7 @@ void luFunc()
 {
   int16_t i;
   
-  i = lookupToken(msp4th_wordBuffer, (uint8_t *)cmdListBi);
+  i = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
   
   if(i){
     i += 20000;
@@ -619,13 +626,13 @@ void luFunc()
     pushMathStack(1);
   } else {
     // need to test internal interp commands
-    i = lookupToken(msp4th_wordBuffer, (uint8_t *)cmdListBi2);
+    i = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
     if(i){
       i += 10000;
       pushMathStack(i);
       pushMathStack(1);
     } else {
-      i = lookupToken(msp4th_wordBuffer, msp4th_cmdList);
+      i = lookupToken(wordBuffer, cmdList);
       if(i){
         pushMathStack(i);
         pushMathStack(1);
@@ -648,26 +655,26 @@ void numFunc()
     n = 0;
 
     // first check for neg sign
-    if (msp4th_wordBuffer[i] == '-') {
+    if (wordBuffer[i] == '-') {
         i = i + 1;
     }
 
-    if ((msp4th_wordBuffer[i] >= '0') && (msp4th_wordBuffer[i] <= '9')) {
+    if ((wordBuffer[i] >= '0') && (wordBuffer[i] <= '9')) {
         // it is a number 
         isnum = 1;
         // check if hex
-        if(msp4th_wordBuffer[0] == '0' && msp4th_wordBuffer[1] == 'x'){
+        if(wordBuffer[0] == '0' && wordBuffer[1] == 'x'){
             // base 16 number ... just assume all characters are good
             i = 2;
             n = 0;
-            while(msp4th_wordBuffer[i]){
+            while(wordBuffer[i]){
                 n = n << 4;
-                n = n + msp4th_wordBuffer[i] - '0';
-                if(msp4th_wordBuffer[i] > '9'){
+                n = n + wordBuffer[i] - '0';
+                if(wordBuffer[i] > '9'){
                     n = n - 7;
 
                     // compensate for lowercase digits
-                    if (msp4th_wordBuffer[i] >= 'a') {
+                    if (wordBuffer[i] >= 'a') {
                         n -= 0x20;
                     }
                 }
@@ -676,12 +683,12 @@ void numFunc()
         } else {
             // base 10 number
             n = 0;
-            while(msp4th_wordBuffer[i]){
+            while(wordBuffer[i]){
                 n = n * 10;
-                n = n + msp4th_wordBuffer[i] - '0';
+                n = n + wordBuffer[i] - '0';
                 i = i + 1;
             }
-            if(msp4th_wordBuffer[0] == '-'){
+            if(wordBuffer[0] == '-'){
                 n = -n;
             }
         }
@@ -779,14 +786,14 @@ void dfnFunc(){
   uint16_t i;
   // this function adds a new def to the list and creats a new opcode
   i = 0;
-  while(msp4th_wordBuffer[i]){
-    msp4th_cmdList[cmdListIdx++] = msp4th_wordBuffer[i];
+  while(wordBuffer[i]){
+    cmdList[cmdListIdx++] = wordBuffer[i];
     i = i + 1;
   }
-  msp4th_cmdList[cmdListIdx++] = ' ';
-  msp4th_cmdList[cmdListIdx] = 0;
-  i = lookupToken(msp4th_wordBuffer, msp4th_cmdList);
-  msp4th_progOpcodes[i] = progIdx;
+  cmdList[cmdListIdx++] = ' ';
+  cmdList[cmdListIdx] = 0;
+  i = lookupToken(wordBuffer, cmdList);
+  progOpcodes[i] = progIdx;
 }
 
 
@@ -860,7 +867,7 @@ void execFunc(){
   } else {
 
     pushAddrStack(progCounter);
-    progCounter = msp4th_progOpcodes[opcode];
+    progCounter = progOpcodes[opcode];
 
   }
 
@@ -1024,7 +1031,7 @@ void execN(int16_t opcode){
       break;    
 
     case 27: // depth  ( -- n ) \ math stack depth
-      pushMathStack((int16_t *)msp4th_mathStackStartAddress - mathStackPtr);
+      pushMathStack((int16_t *)config->mathStackStartAddress - mathStackPtr);
       break;
       
     case 28: // .h  ( a -- )
@@ -1068,7 +1075,7 @@ void execN(int16_t opcode){
       break;
 
     case 38: // pwrd  ( -- ) \ print word buffer
-      msp4th_puts(msp4th_wordBuffer);
+      msp4th_puts(wordBuffer);
       break;
 
     case 39: // emit  ( c -- )
@@ -1281,7 +1288,7 @@ void execN(int16_t opcode){
     case 72: // s.  ( -- ) \ print stack contents, TOS on right
       { // addr is strictly local to this block
           int16_t *addr;
-          addr = (int16_t *)msp4th_mathStackStartAddress;
+          addr = (int16_t *)config->mathStackStartAddress;
           while (addr >= mathStackPtr) {
               printNumber(*addr);
               addr--;
@@ -1292,7 +1299,7 @@ void execN(int16_t opcode){
     case 73: // sh.  ( -- ) \ print stack contents in hex, TOS on right
       { // addr is strictly local to this block
           int16_t *addr;
-          addr = (int16_t *)msp4th_mathStackStartAddress;
+          addr = (int16_t *)config->mathStackStartAddress;
           while (addr >= mathStackPtr) {
               printHexWord(*addr);
               msp4th_putchar(' ');
@@ -1324,17 +1331,28 @@ void execN(int16_t opcode){
  * Public function prototypes
  */
 
-void init_msp4th(void)
+void msp4th_init(struct msp4th_config *c)
 {
     /*
      * Get addresses of user-configurable arrays from the pre-known vector
      * table locations.
      *
-     * Changing the values in the xStartAddress locations and calling
+     * Changing the values in the msp4th_* locations and calling
      * init_msp4th() again restarts the interpreter with the new layout;
      */
-    mathStackPtr = msp4th_mathStackStartAddress;
-    addrStackPtr = msp4th_addrStackStartAddress;
+    mathStackPtr = c->mathStackStartAddress;
+    addrStackPtr = c->addrStackStartAddress;
+    prog = c->prog;
+    progOpcodes = c->progOpcodes;
+    cmdList = c->cmdList;
+    lineBuffer = c->lineBuffer;
+    lineBufferLength = c->lineBufferLength;
+    wordBuffer = c->wordBuffer;
+    wordBufferLength = c->wordBufferLength;
+    msp4th_putchar = c->putchar;
+    msp4th_getchar = c->getchar;
+
+    config = c;
 
 
     xit = 0;
@@ -1348,7 +1366,7 @@ void init_msp4th(void)
 }
 
 
-void processLoop() // this processes the forth opcodes.
+void msp4th_processLoop() // this processes the forth opcodes.
 {
     uint16_t opcode;
     uint16_t tmp;
@@ -1368,7 +1386,7 @@ void processLoop() // this processes the forth opcodes.
             execN(opcode - 20000);
         } else {
             pushAddrStack(progCounter);
-            progCounter = msp4th_progOpcodes[opcode];
+            progCounter = progOpcodes[opcode];
         }
     } // while ()
 }

@@ -118,34 +118,25 @@ uint8_t __attribute__ ((section(".noinit"))) cmdListArray[USER_CMD_LIST_SIZE];
 uint8_t __attribute__ ((section(".noinit"))) lineBufferArray[LINE_BUFFER_SIZE];
 uint8_t __attribute__ ((section(".noinit"))) wordBufferArray[WORD_BUFFER_SIZE];
 
-void (*msp4th_putchar)(uint8_t);
-uint8_t (*msp4th_getchar)(void);
+struct msp4th_config __attribute__ ((section(".noinit"))) default_config;
 
 
-static __inline__ void config_default_msp4th(void)
+static __inline__ void setup_default_msp4th(void)
 {
-    int16_t i;
+    default_config.mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
+    default_config.addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
+    default_config.prog = &progArray[0];
+    default_config.progOpcodes = &progOpcodesArray[0];
+    default_config.cmdList = &cmdListArray[0];
+    default_config.lineBuffer = &lineBufferArray[0];
+    default_config.lineBufferLength = LINE_BUFFER_SIZE;
+    default_config.wordBuffer = &wordBufferArray[0];
+    default_config.wordBufferLength = WORD_BUFFER_SIZE;
+    default_config.putchar = &uart_putchar;
+    default_config.getchar = &uart_getchar;
 
-    msp4th_mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
-    msp4th_addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
-    msp4th_prog = &progArray[0];
-    msp4th_progOpcodes = &progOpcodesArray[0];
-    msp4th_cmdList = &cmdListArray[0];
-    msp4th_lineBuffer = &lineBufferArray[0];
-    msp4th_lineBufferLength = LINE_BUFFER_SIZE;
-    msp4th_wordBuffer = &wordBufferArray[0];
-    msp4th_wordBufferLength = WORD_BUFFER_SIZE;
 
-
-    for (i=0; i < MATH_STACK_SIZE; i++) {
-        mathStackArray[i] = 0;
-    }
-
-    for (i=0; i < ADDR_STACK_SIZE; i++) {
-        addrStackArray[i] = 0;
-    }
-
-    /* example initial line to execute
+    /* howto execute a line of words on init
     uint8_t *str = (uint8_t *)"1 2 3 4 5 s.\r";
     for (i=0; i < 14; i++) {
         lineBufferArray[i] = str[i];
@@ -155,9 +146,6 @@ static __inline__ void config_default_msp4th(void)
 
     lineBufferArray[0] = 0;
     wordBufferArray[0] = 0;
-
-    msp4th_putchar = &uart_putchar;
-    msp4th_getchar = &uart_getchar;
 }
 
 
@@ -205,9 +193,10 @@ int main(void){
      *  - any 0xff character in the input
      */
     while (1) {
-        config_default_msp4th();
-        init_msp4th();
-        processLoop();
+        setup_default_msp4th();
+
+        msp4th_init(&default_config);
+        msp4th_processLoop();
     }
 
     return 0;

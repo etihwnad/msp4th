@@ -27,6 +27,9 @@ uint8_t cmdListArray[CMD_LIST_SIZE];
 uint8_t lineBufferArray[CMD_LIST_SIZE];
 uint8_t wordBufferArray[CMD_LIST_SIZE];
 
+struct msp4th_config default_config;
+
+/*
 int16_t *msp4th_mathStackStartAddress;
 int16_t *msp4th_addrStackStartAddress;
 int16_t *msp4th_prog;
@@ -36,9 +39,10 @@ uint8_t *msp4th_lineBuffer;
 int16_t msp4th_lineBufferLength;
 uint8_t *msp4th_wordBuffer;
 int16_t msp4th_wordBufferLength;
+*/
 
-void (*msp4th_putchar)(uint8_t);
-uint8_t (*msp4th_getchar)(void);
+//void (*msp4th_putchar)(uint8_t);
+//uint8_t (*msp4th_getchar)(void);
 
 
 
@@ -60,6 +64,19 @@ void config_msp4th(void)
 {
     int16_t i;
 
+    default_config.mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
+    default_config.addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
+    default_config.prog = &progArray[0];
+    default_config.progOpcodes = &progOpcodesArray[0];
+    default_config.cmdList = &cmdListArray[0];
+    default_config.lineBuffer = &lineBufferArray[0];
+    default_config.lineBufferLength = LINE_BUFFER_SIZE;
+    default_config.wordBuffer = &wordBufferArray[0];
+    default_config.wordBufferLength = WORD_BUFFER_SIZE;
+    default_config.putchar = &my_putchar;
+    default_config.getchar = &my_getchar;
+
+    /*
     msp4th_mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
     msp4th_addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
 
@@ -75,6 +92,10 @@ void config_msp4th(void)
     msp4th_wordBuffer = &wordBufferArray[0];
     msp4th_wordBufferLength = WORD_BUFFER_SIZE;
 
+    msp4th_putchar = &my_putchar;
+    msp4th_getchar = &my_getchar;
+    */
+
 
     for (i=0; i < MATH_STACK_SIZE; i++) {
         mathStackArray[i] = 0;
@@ -86,9 +107,6 @@ void config_msp4th(void)
 
     lineBufferArray[0] = 0;
     wordBufferArray[0] = 0;
-
-    msp4th_putchar = &my_putchar;
-    msp4th_getchar = &my_getchar;
 }
 
 
@@ -98,8 +116,9 @@ int main(void)
 
     while (1) {
         config_msp4th();
-        init_msp4th();
-        processLoop();
+
+        msp4th_init(&default_config);
+        msp4th_processLoop();
     }
 
     return 0;
