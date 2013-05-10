@@ -336,6 +336,9 @@ int16_t *mathStackPtr;
 int16_t *addrStackPtr;
 #endif
 
+int16_t *mathStackStartAddress;
+int16_t *addrStackStartAddress;
+
 int16_t *prog;          // user programs (opcodes) are placed here
 
 int16_t *progOpcodes;   // mapping between user word index and program opcodes
@@ -518,7 +521,7 @@ int16_t popMathStack(void)
     i = *mathStackPtr;
 
     // prevent stack under-flow
-    if (mathStackPtr < (int16_t *)config->mathStackStartAddress) {
+    if (mathStackPtr < mathStackStartAddress) {
         mathStackPtr++;
     }
 
@@ -1046,7 +1049,7 @@ void execN(int16_t opcode){
       break;    
 
     case 27: // depth  ( -- n ) \ math stack depth
-      pushMathStack((int16_t *)config->mathStackStartAddress - mathStackPtr);
+      pushMathStack(mathStackStartAddress - mathStackPtr);
       break;
       
     case 28: // .h  ( a -- )
@@ -1303,7 +1306,7 @@ void execN(int16_t opcode){
     case 72: // s.  ( -- ) \ print stack contents, TOS on right
       { // addr is strictly local to this block
           int16_t *addr;
-          addr = (int16_t *)config->mathStackStartAddress;
+          addr = mathStackStartAddress;
           while (addr >= mathStackPtr) {
               printNumber(*addr);
               addr--;
@@ -1314,7 +1317,7 @@ void execN(int16_t opcode){
     case 73: // sh.  ( -- ) \ print stack contents in hex, TOS on right
       { // addr is strictly local to this block
           int16_t *addr;
-          addr = (int16_t *)config->mathStackStartAddress;
+          addr = mathStackStartAddress;
           while (addr >= mathStackPtr) {
               printHexWord(*addr);
               msp4th_putchar(' ');
@@ -1352,6 +1355,8 @@ void msp4th_init(struct msp4th_config *c)
      */
     mathStackPtr = c->mathStackStartAddress;
     addrStackPtr = c->addrStackStartAddress;
+    mathStackStartAddress = c->mathStackStartAddress;
+    addrStackStartAddress = c->addrStackStartAddress;
     prog = c->prog;
     progOpcodes = c->progOpcodes;
     cmdList = c->cmdList;
