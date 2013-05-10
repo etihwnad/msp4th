@@ -135,17 +135,20 @@ static __inline__ void setup_default_msp4th(void)
     default_config.putchar = &uart_putchar;
     default_config.getchar = &uart_getchar;
 
+    // terminate the strings
+    lineBufferArray[0] = 0;
+    wordBufferArray[0] = 0;
+    cmdListArray[0] =0;
 
-    /* howto execute a line of words on init
+
+    // howto execute a line of words on init
+    /*
     uint8_t *str = (uint8_t *)"1 2 3 4 5 s.\r";
     for (i=0; i < 14; i++) {
         lineBufferArray[i] = str[i];
         lineBufferArray[i+1] = 0;
     }
     */
-
-    lineBufferArray[0] = 0;
-    wordBufferArray[0] = 0;
 }
 
 

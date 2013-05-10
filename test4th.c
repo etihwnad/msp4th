@@ -76,50 +76,30 @@ void config_msp4th(void)
     default_config.putchar = &my_putchar;
     default_config.getchar = &my_getchar;
 
-    /*
-    msp4th_mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
-    msp4th_addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
-
-    msp4th_prog = &progArray[0];
-
-    msp4th_progOpcodes = &progOpcodesArray[0];
-
-    msp4th_cmdList = &cmdListArray[0];
-
-    msp4th_lineBuffer = &lineBufferArray[0];
-    msp4th_lineBufferLength = LINE_BUFFER_SIZE;
-
-    msp4th_wordBuffer = &wordBufferArray[0];
-    msp4th_wordBufferLength = WORD_BUFFER_SIZE;
-
-    msp4th_putchar = &my_putchar;
-    msp4th_getchar = &my_getchar;
-    */
-
-
-    for (i=0; i < MATH_STACK_SIZE; i++) {
-        mathStackArray[i] = 0;
-    }
-
-    for (i=0; i < ADDR_STACK_SIZE; i++) {
-        addrStackArray[i] = 0;
-    }
-
+    // terminate the strings
     lineBufferArray[0] = 0;
     wordBufferArray[0] = 0;
+    cmdListArray[0] = 0;
+
+
+    // howto execute a line of words on init
+    /*
+    uint8_t *str = (uint8_t *)"1 2 3 4 5 s.\r";
+    for (i=0; i < 14; i++) {
+        lineBufferArray[i] = str[i];
+        lineBufferArray[i+1] = 0;
+    }
+    */
 }
 
 
 
 int main(void)
 {
+    config_msp4th();
 
-    while (1) {
-        config_msp4th();
-
-        msp4th_init(&default_config);
-        msp4th_processLoop();
-    }
+    msp4th_init(&default_config);
+    msp4th_processLoop();
 
     return 0;
 }
