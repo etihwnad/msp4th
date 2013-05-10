@@ -5,12 +5,12 @@
 
 ; msp430-gcc uses r[0,1,2] not pc,sp,sr
 
+; sr comes out of reset all zeros, no need for "dint"
 
 ; setup stack pointer to end of RAM
 ; not used in this asm code, but arguably necessary for proper init of the C
 ; environment later
     mov     #StackStart,r1
-    dint
 
 /*
  * old code.
@@ -27,37 +27,37 @@
 ;  (to read count later in early user code)
 ;  all function calls push/pop r9
 ;  user code may initially read r9 to get the RAM error count
-    clr     r9              
-    mov     #0xaaaa,r5      ;#0xaaaa
-    mov     #16384, r7      ;#RAMStart
-    mov     #24576, r8      ;#0x6000
-    dec     r8              
-    .rpt    r8
-    movx    r5,     r7      
-    bic     #15,    r8      ;#0x000f
-    tst     r8              
-    jnz     $-12            ;abs 0x305c
-    mov     #16384, r7      ;#RAMStart
-    mov     #24576, r8      ;#0x6000
-    mov     r5,     r11     
-    rlam    #4,     r11     
-    clr     r10             
-    dec     r8              
-    addx    @r7+,   r10     
-    cmp     r10,    r11     
-    jz      $+4             ;abs 0x3084
-    inc     r9              
-    bic     #15,    r8      ;#0x000f
-    tst     r8              
-    jnz     $-20            ;abs 0x3076
-    cmp     #-1,    r5      ;r3 As==11
-    jz      $+18            ;abs 0x30a0
-    cmp     #21845, r5      ;#0x5555
-    jz      $+8             ;abs 0x309c
-    mov     #21845, r5      ;#0x5555
-    jmp     $-70            ;abs 0x3054
-    mov     #-1,    r5      ;r3 As==11
-    jmp     $-74            ;abs 0x3054
+;    clr     r9              
+;    mov     #0xaaaa,r5      ;#0xaaaa
+;    mov     #16384, r7      ;#RAMStart
+;    mov     #24576, r8      ;#0x6000
+;    dec     r8              
+;    .rpt    r8
+;    movx    r5,     r7      
+;    bic     #15,    r8      ;#0x000f
+;    tst     r8              
+;    jnz     $-12            ;abs 0x305c
+;    mov     #16384, r7      ;#RAMStart
+;    mov     #24576, r8      ;#0x6000
+;    mov     r5,     r11     
+;    rlam    #4,     r11     
+;    clr     r10             
+;    dec     r8              
+;    addx    @r7+,   r10     
+;    cmp     r10,    r11     
+;    jz      $+4             ;abs 0x3084
+;    inc     r9              
+;    bic     #15,    r8      ;#0x000f
+;    tst     r8              
+;    jnz     $-20            ;abs 0x3076
+;    cmp     #-1,    r5      ;r3 As==11
+;    jz      $+18            ;abs 0x30a0
+;    cmp     #21845, r5      ;#0x5555
+;    jz      $+8             ;abs 0x309c
+;    mov     #21845, r5      ;#0x5555
+;    jmp     $-70            ;abs 0x3054
+;    mov     #-1,    r5      ;r3 As==11
+;    jmp     $-74            ;abs 0x3054
 */
 
 ;check state of PA(7)
