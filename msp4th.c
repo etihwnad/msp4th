@@ -531,8 +531,17 @@ int16_t popMathStack(void)
 
 void pushMathStack(int16_t n)
 {
+#if defined(MSP430)
+    asm("decd %[ms]\n"
+        "mov %[n],  @%[ms]\n"
+        : /* outputs */
+        : /* inputs */ [n] "r" (n), [ms] "r" (mathStackPtr)
+        : /* clobbers */
+       );
+#else
     mathStackPtr--;
     *mathStackPtr = n;
+#endif
 }
 
 
@@ -544,8 +553,17 @@ int16_t popAddrStack(void)
 {
     int16_t i;
 
+#if defined(MSP430)
+    asm("mov @%[as],  %[out]\n"
+        "incd %[as]\n"
+        : /* outputs */ [out] "=r" (i)
+        : /* inputs */  [as] "r" (addrStackPtr)
+        : /* clobbers */
+       );
+#else
     i = *addrStackPtr;
     addrStackPtr++;
+#endif
 
     return(i);
 }
@@ -553,8 +571,17 @@ int16_t popAddrStack(void)
 
 void pushAddrStack(int16_t n)
 {
+#if defined(MSP430)
+    asm("decd %[as]\n"
+        "mov %[n],  @%[as]\n"
+        : /* outputs */
+        : /* inputs */ [n] "r" (n), [as] "r" (addrStackPtr)
+        : /* clobbers */
+       );
+#else
     addrStackPtr--;
     *addrStackPtr = n;
+#endif
 }
 
 
