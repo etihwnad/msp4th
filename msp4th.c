@@ -352,7 +352,6 @@ int16_t wordBufferLength;
 void (*msp4th_putchar)(uint8_t c);
 uint8_t (*msp4th_getchar)(void);
 
-struct msp4th_config *config;
 
 
 
@@ -1393,8 +1392,6 @@ void msp4th_init(struct msp4th_config *c)
     wordBufferLength = c->wordBufferLength;
     msp4th_putchar = c->putchar;
     msp4th_getchar = c->getchar;
-
-    config = c;
 
 
     xit = 0;
