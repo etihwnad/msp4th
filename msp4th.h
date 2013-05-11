@@ -18,6 +18,7 @@ struct msp4th_config {
     int16_t wordBufferLength;
     void (*putchar)(uint8_t);
     uint8_t (*getchar)(void);
+    void (*puts)(uint8_t *);
 };
 
 void msp4th_init(struct msp4th_config *);

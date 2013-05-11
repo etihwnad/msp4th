@@ -44,6 +44,11 @@ uint8_t my_getchar(void)
 }
 
 
+void my_puts(uint8_t *s)
+{
+    puts((char *)s);
+}
+
 
 
 void config_msp4th(void)
@@ -59,6 +64,7 @@ void config_msp4th(void)
     config.wordBufferLength = WORD_BUFFER_SIZE;
     config.putchar = &my_putchar;
     config.getchar = &my_getchar;
+    config.puts = &my_puts;
 
     // terminate the strings
     lineBufferArray[0] = 0;

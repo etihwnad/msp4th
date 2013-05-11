@@ -134,6 +134,7 @@ static __inline__ void setup_default_msp4th(void)
     default_config.wordBufferLength = WORD_BUFFER_SIZE;
     default_config.putchar = &uart_putchar;
     default_config.getchar = &uart_getchar;
+    default_config.puts = &uart_puts;
 
     // terminate the strings
     lineBufferArray[0] = 0;

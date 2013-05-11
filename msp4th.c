@@ -1,22 +1,24 @@
 /*
+ *  msp4th
+ *
+ *  forth-like interpreter for the msp430
+ *
+ *  Source originally from Mark Bauer, beginning life in the z80 and earlier.
+ *  Nathan Schemm used and modified for use in his series of msp430-compatible
+ *  processors.
+ *
+ *  This version by Dan White (2013).  Cleaned-up, expanded, and given
+ *  capabilities to allow live re-configuration and directly calling user C
+ *  functions.
+ *
+ *  * Used in Dan's "atoi" chip loaded from flash into RAM.
+ *  * Fabbed in ROM as part of the Gharzai/Schmitz "piranha" imager chip.
+ *
+ *  If cpp symbol "MSP430" is not defined, it compiles to a version for testing
+ *  on PC as a console program via the setup and main() in "test430.c".
  *
  * TODO:
- *  - use enum for VM opcodes
- *
- *  X speed up pop/pushMathStack (need bounds check??)
- *      only bounds check is for mathStack underflow
- *
- *  X UART usage is blocking, convert to interrupt-based
- *      user may provide msp4th_{putchar,getchar} function pointers
- *      the default one remains blocking
- *
- *  X allow configurable user-code space
- *      mathStack[], addrStack[]
- *      prog[], cmdList[], progOpcodes[]
- *      array locations come from a vector table instead of hard-coded
- *      locations in bss space.  init_msp4th() populates the pointers
- *      with values from the table (which can be user-written to effect
- *      changing user code sizes.
+ *  - use enum/symbols for VM opcodes (?builtins tagged as negative numbers?)
  *
  */
 
@@ -24,54 +26,91 @@
 #if defined(MSP430)
 #include "ns430.h"
 #include "ns430-atoi.h"
+
 // our "special" pointer, direct word access to all absolute address space
 #define dirMemory ((int16_t *) 0)
 
 #else
 // mixins to test msp4th on PC
 #include <stdint.h>
-
-// the OS does not like direct memory addressing, something about
-// segfaulting...  just create a sham space for testing
+// the OS does not like direct, absolute, memory addressing...
+// just create a sham space for testing
 int16_t dirMemory[65536];
+
 #endif
 
 
 #include "msp4th.h"
 
 
+/****************************************************************************
+ *
+ * Module-level global variables (in RAM)
+ *
+ ***************************************************************************/
+int16_t xit;  // set to 1 to kill program
+int16_t echo; // boolean: false -> no interactive echo/prompt
 
+uint16_t progCounter;  // value determines builtin/user and opcode to execute
 
-/*
- * Local function prototypes
+int16_t lineBufferIdx; // input line buffer index
+int16_t progIdx;       // next open space for user opcodes
+int16_t cmdListIdx;    // next open space for user word strings
+
+/* The following allow re-configuring the location/size of all configurable
+ * arrays.  Then the stack sizes and user program space sizes can be
+ * (re-)specified by changing the table and calling init_msp4th() again.  See
+ * test430.c for a configuration example.
+ *
+ * THE ONLY BOUNDARY CHECKS ARE:
+ *  - math stack underflow
+ *  - line buffer overflow
+ *  - word buffer overflow
+ *
+ * The user is therefore responsible for:
+ *  - keeping stack depths in range
+ *  - not underflowing the address stack
+ *  - allocating sufficient space in prog[], progOpcodes[], cmdList[]
  */
-void msp4th_puts(uint8_t *s);
-uint8_t getKeyB(void);
-void getLine(void);
-uint8_t nextPrintableChar(void);
-uint8_t skipStackComment(void);
-void getWord(void);
-void listFunction(void);
-int16_t popMathStack(void);
-void pushMathStack(int16_t n);
-int16_t popAddrStack(void);
-void pushAddrStack(int16_t n);
-void ndropFunc(void);
-int16_t lookupToken(uint8_t *x, uint8_t *l);
-void luFunc(void);
-void numFunc(void);
-void ifFunc(int16_t x);
-void loopFunc(int16_t n);
-void rollFunc(int16_t n);
-void pushnFunc(void);
-void overFunc(void);
-void dfnFunc(void);
-void printNumber(int16_t n);
-void printHexChar(int16_t n);
-void printHexByte(int16_t n);
-void printHexWord(int16_t n);
-void execN(int16_t n);
-void execFunc(void);
+#if defined(MSP430)
+/* Register notes.
+ * r0-3 are special (pc, sp, sr, cg)
+ * In mspgcc:
+ *  r4-5 are (sometimes) used as frame and argument pointers.
+ *  r12-15 are call clobbered.
+ *  * Function arguments are allocated left-to-right assigned r15--r12, others
+ *    are passed on the stack.
+ *  * Return values are passed in r15, r15:r14, r15:r14:r13, or r15:r14:r13:r12
+ *    depending on size.
+ */
+int16_t register *mathStackPtr asm("r6"); // used enough to keep in registers
+int16_t register *addrStackPtr asm("r7");
+#else
+int16_t *mathStackPtr;
+int16_t *addrStackPtr;
+#endif
+
+int16_t *mathStackStart; // original locations for calculating stack depth
+int16_t *addrStackStart;
+
+int16_t *prog;           // user programs (opcodes) are placed here
+
+int16_t *progOpcodes;    // mapping between cmdList word index and program
+                         // opcodes start index into prog[]
+
+uint8_t *cmdList;        // string containing user-defined words
+
+uint8_t *lineBuffer;     // where interactive inputs are buffered
+int16_t lineBufferLength;// to prevent overflow
+
+uint8_t *wordBuffer;     // the currently-parsed word
+int16_t wordBufferLength;
+
+void (*msp4th_putchar)(uint8_t c); // the sole interactive output avenue
+uint8_t (*msp4th_getchar)(void);   // the sole interactive input avenue
+void (*msp4th_puts)(uint8_t *s); // the sole interactive output avenue
+
+
 
 
 /****************************************************************************
@@ -98,8 +137,9 @@ const uint8_t cmdListBi[] = {
               "call2 call3 call4 ndrop swpb "       // 61 -> 65
               "+! roll pick tuck max "              // 66 -> 70
               "min s. sh. neg echo "                // 71 -> 75
+              "init "                               // 76
              };
-#define LAST_PREDEFINED 75	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 76	// update this when we add commands to the built in list
 
 
 // these commands are interps
@@ -307,73 +347,115 @@ const int16_t progBi[] = { // address actually start at 10000
    };   
 
 
+
 /****************************************************************************
  *
- * Module-level global variables (in RAM)
+ * Local function prototypes
  *
  ***************************************************************************/
-int16_t xit; // set to 1 to kill program
-int16_t echo; // boolean: false -> no interactive echo/prompt
-
-uint16_t progCounter;
-
-int16_t lineBufferIdx;             /* input line buffer index */
-int16_t progIdx;       // next open space for user opcodes
-int16_t cmdListIdx;    // next open space for user word strings
-
-
-
-/* The following utilize a vector table to allow re-configuring the
- * location/size of these arrays.  Then the stack sizes and user program space
- * sizes can be (re-)specified by changing the table and calling init_msp4th()
- * again.
- */
-#if defined(MSP430)
-int16_t register *mathStackPtr asm("r6");
-int16_t register *addrStackPtr asm("r7");
-#else
-int16_t *mathStackPtr;
-int16_t *addrStackPtr;
-#endif
-
-int16_t *mathStackStart;
-int16_t *addrStackStart;
-
-int16_t *prog;          // user programs (opcodes) are placed here
-
-int16_t *progOpcodes;   // mapping between user word index and program opcodes
-                        // start index into prog[]
-
-uint8_t *cmdList;
-uint8_t *lineBuffer;
-int16_t lineBufferLength;
-uint8_t *wordBuffer;
-int16_t wordBufferLength;
-void (*msp4th_putchar)(uint8_t c);
-uint8_t (*msp4th_getchar)(void);
+uint8_t getKeyB(void);
+void getLine(void);
+uint8_t nextPrintableChar(void);
+uint8_t skipStackComment(void);
+void getWord(void);
+void listFunction(void);
+int16_t popMathStack(void);
+void pushMathStack(int16_t n);
+int16_t popAddrStack(void);
+void pushAddrStack(int16_t n);
+void ndropFunc(void);
+int16_t lookupToken(uint8_t *x, uint8_t *l);
+void luFunc(void);
+void numFunc(void);
+void ifFunc(int16_t x);
+void loopFunc(int16_t n);
+void rollFunc(int16_t n);
+void pushnFunc(void);
+void overFunc(void);
+void dfnFunc(void);
+void printNumber(int16_t n);
+void printHexChar(int16_t n);
+void printHexByte(int16_t n);
+void printHexWord(int16_t n);
+void execN(int16_t n);
+void execFunc(void);
 
 
 
+/****************************************************************************
+ *
+ * Public functions
+ *
+ ***************************************************************************/
 
-
-
-
-
-
-
-
-void msp4th_puts(uint8_t *s)
+void msp4th_init(struct msp4th_config *c)
 {
-    uint16_t i = 0;
-    uint8_t c = 1;
+    /*
+     * Get addresses of user-configurable arrays from the pre-known vector
+     * table locations.
+     *
+     * Changing the values in the msp4th_* locations and calling
+     * init_msp4th() again restarts the interpreter with the new layout;
+     */
+    mathStackPtr = c->mathStackStart;
+    addrStackPtr = c->addrStackStart;
+    mathStackStart = c->mathStackStart;
+    addrStackStart = c->addrStackStart;
+    prog = c->prog;
+    progOpcodes = c->progOpcodes;
+    cmdList = c->cmdList;
+    lineBuffer = c->lineBuffer;
+    lineBufferLength = c->lineBufferLength;
+    wordBuffer = c->wordBuffer;
+    wordBufferLength = c->wordBufferLength;
+    msp4th_putchar = c->putchar;
+    msp4th_getchar = c->getchar;
+    msp4th_puts = c->puts;
 
-    while (c != 0) {
-        c = s[i++];
-        msp4th_putchar(c);
-    }
-    msp4th_putchar('\r');
-    msp4th_putchar('\n');
+
+    xit = 0;
+    echo = 1;
+    progCounter = 10000;
+    progIdx = 1;			// this will be the first opcode
+    cmdListIdx = 0;
+
+    lineBufferIdx = 0;
+    msp4th_puts((uint8_t *)"msp4th!");
 }
+
+
+void msp4th_processLoop() // this processes the forth opcodes.
+{
+    uint16_t opcode;
+    uint16_t tmp;
+
+    while(xit == 0){
+        if(progCounter > 9999){
+            tmp = progCounter - 10000;
+            opcode = progBi[tmp];
+        } else {
+            opcode = prog[progCounter];
+        }
+
+        progCounter = progCounter + 1;
+
+        if(opcode > 19999){
+            // this is a built in opcode
+            execN(opcode - 20000);
+        } else {
+            pushAddrStack(progCounter);
+            progCounter = progOpcodes[opcode];
+        }
+    } // while ()
+}
+
+
+
+
+
+
+
+
 
 
 uint8_t getKeyB()
@@ -415,6 +497,7 @@ void getLine()
         } else if ( ((c == 255) || (c == '')) && (lineBufferIdx == 0)) {
             xit = 1;
             waiting = 0;
+            // add a sham word so we make it back to processLoop() to exit
             lineBuffer[lineBufferIdx++] = 'x';
             lineBuffer[lineBufferIdx] = ' ';
         } else {
@@ -544,7 +627,7 @@ void pushMathStack(int16_t n)
 }
 
 
-#define ATOS (addrStackPtr)
+#define ATOS (*addrStackPtr)
 #define ANOS (*(addrStackPtr + 1))
 #define ASTACK(n) (*(addrStackPtr + n))
 
@@ -756,21 +839,25 @@ void ifFunc(int16_t x){     // used as goto if x == 1
 
 void loopFunc(int16_t n)
 {
-    int16_t j, k, m;
+#define j ATOS      // loop address
+#define k ANOS      // count
+#define m ASTACK(2) // limit
 
-    j = popAddrStack();  // loop address
-    k = popAddrStack();  // count
-    m = popAddrStack();  // limit
-    k = k + n;           // up the count
+    ANOS += n;     // inc/dec the count
 
-    if ( ! (   ((n > 0) && (k >= m))
-            || ((n < 0) && (k <= m)))) {
-        // put it all back and loop
-        pushAddrStack(m);
-        pushAddrStack(k);
-        pushAddrStack(j);
+    if ( ! (   ((n >= 0) && (k >= m))
+            || ((n <= 0) && (k <= m)))) {
+        // loop
         progCounter = j;
+    } else {
+        // done, cleanup
+        popAddrStack();
+        popAddrStack();
+        popAddrStack();
     }
+#undef j
+#undef k
+#undef m
 }
 
 
@@ -950,7 +1037,7 @@ void execN(int16_t opcode){
           "mov r14, 0(%[ms])\n"
           : /* outputs */
           : [ms] "r" (mathStackPtr) /* inputs */
-          : /* clobbers */
+          : /* clobbers */ "r10","r11","r12","r13","r14"
          );
 #else
       i = NOS;
@@ -1020,7 +1107,7 @@ void execN(int16_t opcode){
 
     case 16: // abs  ( a -- |a| ) \ -32768 is unchanged
       if (TOS < 0) {
-          TOS = ~TOS + 1;
+          TOS = -TOS;
       }
       break;
 
@@ -1207,10 +1294,10 @@ void execN(int16_t opcode){
       MPYS = popMathStack();
       OP2 = NOS;
       x = (((int32_t)RESHI << 16) | RESLO);
+      asm("eint");
       x = (x / TOS);
       popMathStack();
       TOS = (int16_t)(x & 0xffff);
-      asm("eint");
 #else
       i = popMathStack();
       j = TOS;
@@ -1358,6 +1445,21 @@ void execN(int16_t opcode){
 
     case 75: // echo  ( bool -- ) \ ?echo prompts and terminal input?
       echo = popMathStack();
+      break;
+
+    case 76: // init  ( &config -- ) \ clears buffers and calls msp4th_init
+#if defined(MSP430)
+      //saves 2 words of ROM
+      asm("mov.w #0, %[b](r3)\n"
+          : /* outputs */
+          : [b] "m" (lineBuffer) /* inputs */
+          : /* clobbers */
+         );
+#else
+      *lineBuffer = 0;
+#endif
+      msp4th_init((struct msp4th_config *)popMathStack());
+      break;
 
     default:
       break;
@@ -1365,68 +1467,4 @@ void execN(int16_t opcode){
 }
 
 
-
-/*
- * Public function prototypes
- */
-
-void msp4th_init(struct msp4th_config *c)
-{
-    /*
-     * Get addresses of user-configurable arrays from the pre-known vector
-     * table locations.
-     *
-     * Changing the values in the msp4th_* locations and calling
-     * init_msp4th() again restarts the interpreter with the new layout;
-     */
-    mathStackPtr = c->mathStackStart;
-    addrStackPtr = c->addrStackStart;
-    mathStackStart = c->mathStackStart;
-    addrStackStart = c->addrStackStart;
-    prog = c->prog;
-    progOpcodes = c->progOpcodes;
-    cmdList = c->cmdList;
-    lineBuffer = c->lineBuffer;
-    lineBufferLength = c->lineBufferLength;
-    wordBuffer = c->wordBuffer;
-    wordBufferLength = c->wordBufferLength;
-    msp4th_putchar = c->putchar;
-    msp4th_getchar = c->getchar;
-
-
-    xit = 0;
-    echo = 1;
-    progCounter = 10000;
-    progIdx = 1;			// this will be the first opcode
-    cmdListIdx = 0;
-
-    lineBufferIdx = 0;
-    msp4th_puts((uint8_t *)"msp4th!");
-}
-
-
-void msp4th_processLoop() // this processes the forth opcodes.
-{
-    uint16_t opcode;
-    uint16_t tmp;
-
-    while(xit == 0){
-        if(progCounter > 9999){
-            tmp = progCounter - 10000;
-            opcode = progBi[tmp];
-        } else {
-            opcode = prog[progCounter];
-        }
-
-        progCounter = progCounter + 1;
-
-        if(opcode > 19999){
-            // this is a built in opcode
-            execN(opcode - 20000);
-        } else {
-            pushAddrStack(progCounter);
-            progCounter = progOpcodes[opcode];
-        }
-    } // while ()
-}
 
