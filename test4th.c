@@ -48,8 +48,6 @@ uint8_t my_getchar(void)
 
 void config_msp4th(void)
 {
-    int16_t i;
-
     config.mathStackStart = &mathStackArray[MATH_STACK_SIZE - 1];
     config.addrStackStart = &addrStackArray[ADDR_STACK_SIZE - 1];
     config.prog = &progArray[0];
@@ -70,6 +68,7 @@ void config_msp4th(void)
 
     // howto execute a line of words on init
     /*
+    int16_t i;
     uint8_t *str = (uint8_t *)"1 2 3 4 5 s.\r";
     for (i=0; i < 14; i++) {
         lineBufferArray[i] = str[i];
