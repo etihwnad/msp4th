@@ -506,7 +506,7 @@ void listFunction()
 {
     msp4th_puts((uint8_t *)cmdListBi);
     msp4th_puts((uint8_t *)cmdListBi2);
-    msp4th_puts((uint8_t *)cmdList);
+    msp4th_puts(cmdList);
 }
 
 
