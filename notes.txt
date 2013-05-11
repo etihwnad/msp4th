@@ -1,0 +1,8 @@
+
+2013-05-05 22:19:11
+----------------------------------------
+: pav dup .h 0x20 emit @ .h cr ; ( a -- ) \print hex "address value"
+
+\compare range, dump "addr value" only if they do not match
+: cmprange 0x6000 0x4000 do i @ i 0x2000 + @ == not if i pav then loop ;
+cmprange
