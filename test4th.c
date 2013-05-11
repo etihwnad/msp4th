@@ -27,22 +27,8 @@ uint8_t cmdListArray[CMD_LIST_SIZE];
 uint8_t lineBufferArray[CMD_LIST_SIZE];
 uint8_t wordBufferArray[CMD_LIST_SIZE];
 
-struct msp4th_config default_config;
+struct msp4th_config config;
 
-/*
-int16_t *msp4th_mathStackStartAddress;
-int16_t *msp4th_addrStackStartAddress;
-int16_t *msp4th_prog;
-int16_t *msp4th_progOpcodes;
-uint8_t *msp4th_cmdList;
-uint8_t *msp4th_lineBuffer;
-int16_t msp4th_lineBufferLength;
-uint8_t *msp4th_wordBuffer;
-int16_t msp4th_wordBufferLength;
-*/
-
-//void (*msp4th_putchar)(uint8_t);
-//uint8_t (*msp4th_getchar)(void);
 
 
 
@@ -64,17 +50,17 @@ void config_msp4th(void)
 {
     int16_t i;
 
-    default_config.mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
-    default_config.addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
-    default_config.prog = &progArray[0];
-    default_config.progOpcodes = &progOpcodesArray[0];
-    default_config.cmdList = &cmdListArray[0];
-    default_config.lineBuffer = &lineBufferArray[0];
-    default_config.lineBufferLength = LINE_BUFFER_SIZE;
-    default_config.wordBuffer = &wordBufferArray[0];
-    default_config.wordBufferLength = WORD_BUFFER_SIZE;
-    default_config.putchar = &my_putchar;
-    default_config.getchar = &my_getchar;
+    config.mathStackStart = &mathStackArray[MATH_STACK_SIZE - 1];
+    config.addrStackStart = &addrStackArray[ADDR_STACK_SIZE - 1];
+    config.prog = &progArray[0];
+    config.progOpcodes = &progOpcodesArray[0];
+    config.cmdList = &cmdListArray[0];
+    config.lineBuffer = &lineBufferArray[0];
+    config.lineBufferLength = LINE_BUFFER_SIZE;
+    config.wordBuffer = &wordBufferArray[0];
+    config.wordBufferLength = WORD_BUFFER_SIZE;
+    config.putchar = &my_putchar;
+    config.getchar = &my_getchar;
 
     // terminate the strings
     lineBufferArray[0] = 0;
@@ -98,7 +84,7 @@ int main(void)
 {
     config_msp4th();
 
-    msp4th_init(&default_config);
+    msp4th_init(&config);
     msp4th_processLoop();
 
     return 0;

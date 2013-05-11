@@ -7,8 +7,8 @@
  */
 
 struct msp4th_config {
-    int16_t *mathStackStartAddress;
-    int16_t *addrStackStartAddress;
+    int16_t *mathStackStart;
+    int16_t *addrStackStart;
     int16_t *prog;
     int16_t *progOpcodes;
     uint8_t *cmdList;

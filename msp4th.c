@@ -336,8 +336,8 @@ int16_t *mathStackPtr;
 int16_t *addrStackPtr;
 #endif
 
-int16_t *mathStackStartAddress;
-int16_t *addrStackStartAddress;
+int16_t *mathStackStart;
+int16_t *addrStackStart;
 
 int16_t *prog;          // user programs (opcodes) are placed here
 
@@ -521,7 +521,7 @@ int16_t popMathStack(void)
     i = *mathStackPtr;
 
     // prevent stack under-flow
-    if (mathStackPtr < mathStackStartAddress) {
+    if (mathStackPtr < mathStackStart) {
         mathStackPtr++;
     }
 
@@ -1076,7 +1076,7 @@ void execN(int16_t opcode){
       break;    
 
     case 27: // depth  ( -- n ) \ math stack depth
-      pushMathStack(mathStackStartAddress - mathStackPtr);
+      pushMathStack(mathStackStart - mathStackPtr);
       break;
       
     case 28: // .h  ( a -- )
@@ -1333,7 +1333,7 @@ void execN(int16_t opcode){
     case 72: // s.  ( -- ) \ print stack contents, TOS on right
       { // addr is strictly local to this block
           int16_t *addr;
-          addr = mathStackStartAddress;
+          addr = mathStackStart;
           while (addr >= mathStackPtr) {
               printNumber(*addr);
               addr--;
@@ -1344,7 +1344,7 @@ void execN(int16_t opcode){
     case 73: // sh.  ( -- ) \ print stack contents in hex, TOS on right
       { // addr is strictly local to this block
           int16_t *addr;
-          addr = mathStackStartAddress;
+          addr = mathStackStart;
           while (addr >= mathStackPtr) {
               printHexWord(*addr);
               msp4th_putchar(' ');
@@ -1380,10 +1380,10 @@ void msp4th_init(struct msp4th_config *c)
      * Changing the values in the msp4th_* locations and calling
      * init_msp4th() again restarts the interpreter with the new layout;
      */
-    mathStackPtr = c->mathStackStartAddress;
-    addrStackPtr = c->addrStackStartAddress;
-    mathStackStartAddress = c->mathStackStartAddress;
-    addrStackStartAddress = c->addrStackStartAddress;
+    mathStackPtr = c->mathStackStart;
+    addrStackPtr = c->addrStackStart;
+    mathStackStart = c->mathStackStart;
+    addrStackStart = c->addrStackStart;
     prog = c->prog;
     progOpcodes = c->progOpcodes;
     cmdList = c->cmdList;

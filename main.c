@@ -123,8 +123,8 @@ struct msp4th_config __attribute__ ((section(".noinit"))) default_config;
 
 static __inline__ void setup_default_msp4th(void)
 {
-    default_config.mathStackStartAddress = &mathStackArray[MATH_STACK_SIZE - 1];
-    default_config.addrStackStartAddress = &addrStackArray[ADDR_STACK_SIZE - 1];
+    default_config.mathStackStart = &mathStackArray[MATH_STACK_SIZE - 1];
+    default_config.addrStackStart = &addrStackArray[ADDR_STACK_SIZE - 1];
     default_config.prog = &progArray[0];
     default_config.progOpcodes = &progOpcodesArray[0];
     default_config.cmdList = &cmdListArray[0];
