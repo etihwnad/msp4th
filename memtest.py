@@ -6,6 +6,8 @@ from myhdl import intbv
 
 
 # memtest.py code.hex memdump.txt
+# hex assumes a start address of 0x4000 thru 0xff00
+# txt is lines of "0xaddr 0xvalue"
 
 #
 # helpers
