@@ -424,7 +424,7 @@ void msp4th_init(struct msp4th_config *c)
 }
 
 
-void msp4th_processLoop() // this processes the forth opcodes.
+void msp4th_processLoop(void) // this processes the forth opcodes.
 {
     uint16_t opcode;
     uint16_t tmp;
@@ -451,14 +451,13 @@ void msp4th_processLoop() // this processes the forth opcodes.
 
 
 
+/****************************************************************************
+ *
+ * The rest of the implementation
+ *
+ ***************************************************************************/
 
-
-
-
-
-
-
-uint8_t getKeyB()
+uint8_t getKeyB(void)
 {
     uint8_t c;
 
@@ -472,7 +471,7 @@ uint8_t getKeyB()
 }
 
 
-void getLine()
+void getLine(void)
 {
     int16_t waiting;
     uint8_t c;
@@ -584,7 +583,7 @@ void getWord(void)
 }
 
 
-void listFunction()
+void listFunction(void)
 {
     msp4th_puts((uint8_t *)cmdListBi);
     msp4th_puts((uint8_t *)cmdListBi2);
@@ -678,85 +677,92 @@ void ndropFunc(void)
 
 int16_t lookupToken(uint8_t *x, uint8_t *l) // looking for x in l
 {
-  int16_t i,j,k,n;
+    int16_t i,j,k,n;
 
-  i = 0;
-  j = 0;
-  k = 0;
-  n = 1;
+    i = 0;
+    j = 0;
+    k = 0;
+    n = 1;
 
-  while(l[i] != 0){
-    if(x[j] != 0){   
-      // we expect the next char to match
-      if(l[i] == ' '){
-        // can't match x is longer than the one we were looking at
-        j = 0;
-        n++;
-        while(l[i] > ' '){ i++; }
-      } else {
-        if(l[i] == x[j]){
-          j++;
+    while (l[i] != 0) {
+        if (x[j] != 0) {
+            // we expect the next char to match
+            if (l[i] == ' ') {
+                // can't match x is longer than the one we were looking at
+                j = 0;
+                n++;
+                while (l[i] > ' ') {
+                    i++;
+                }
+            } else {
+                if (l[i] == x[j]) {
+                    j++;
+                } else {
+                    j = 0;
+                    while (l[i] > ' ') {
+                        i++;
+                    }
+                    n++;
+                }
+            }
         } else {
-          j = 0;
-          while(l[i] > ' '){ i++; }
-          n++;
+            // ran out of input ... did we hit the space we expected???
+            if (l[i] == ' ') {
+                // we found it.
+                k = n;
+                while (l[i] != 0) {
+                    i++;
+                }
+            } else {
+                // missed it
+                j = 0;
+                n++;
+                while (l[i] > ' ') {
+                    i++;
+                }
+            }
         }
-      }
-    } else {
-      // ran out of input ... did we hit the space we expected???
-      if(l[i] == ' '){
-        // we found it.
-        k = n;
-        while(l[i] != 0){
-          i++;
-        }
-      } else {
-        // missed it
-        j = 0;
-        n++;
-        while(l[i] > ' '){ i++; }
-
-      }
+        i++;
     }
-    i++;
-  }
 
-  return(k);
+    return(k);
 }
 
 
-void luFunc()
+void luFunc(void)
 {
-  int16_t i;
-  
-  i = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
-  
-  if(i){
-    i += 20000;
-    pushMathStack(i);
-    pushMathStack(1);
-  } else {
-    // need to test internal interp commands
-    i = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
-    if(i){
-      i += 10000;
-      pushMathStack(i);
-      pushMathStack(1);
-    } else {
-      i = lookupToken(wordBuffer, cmdList);
-      if(i){
+    int16_t i;
+
+    i = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
+
+    if (i) {
+        i += 20000;
         pushMathStack(i);
         pushMathStack(1);
-      } else {
-        pushMathStack(0);
-      }
+    } else {
+        // need to test internal interp commands
+        i = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
+        if (i) {
+            i += 10000;
+            pushMathStack(i);
+            pushMathStack(1);
+        } else {
+            i = lookupToken(wordBuffer, cmdList);
+            if (i) {
+                pushMathStack(i);
+                pushMathStack(1);
+            } else {
+                pushMathStack(0);
+            }
+        }
     }
-  }  
-} 
+}
 
 
-void numFunc()
-{  // the word to test is in wordBuffer
+void numFunc(void)
+{
+    // the word to test is in wordBuffer
+
     uint16_t i;
     int16_t isnum;
     int16_t n;
@@ -774,14 +780,14 @@ void numFunc()
         // it is a number 
         isnum = 1;
         // check if hex
-        if(wordBuffer[0] == '0' && wordBuffer[1] == 'x'){
+        if (wordBuffer[0] == '0' && wordBuffer[1] == 'x') {
             // base 16 number ... just assume all characters are good
             i = 2;
             n = 0;
-            while(wordBuffer[i]){
+            while (wordBuffer[i]) {
                 n = n << 4;
                 n = n + wordBuffer[i] - '0';
-                if(wordBuffer[i] > '9'){
+                if (wordBuffer[i] > '9') {
                     n = n - 7;
 
                     // compensate for lowercase digits
@@ -794,12 +800,12 @@ void numFunc()
         } else {
             // base 10 number
             n = 0;
-            while(wordBuffer[i]){
+            while (wordBuffer[i]) {
                 n = n * 10;
                 n = n + wordBuffer[i] - '0';
                 i = i + 1;
             }
-            if(wordBuffer[0] == '-'){
+            if (wordBuffer[0] == '-') {
                 n = -n;
             }
         }
@@ -810,7 +816,9 @@ void numFunc()
 }
 
 
-void ifFunc(int16_t x){     // used as goto if x == 1
+void ifFunc(int16_t x){
+    // used as goto if x == 1
+
     uint16_t addr;
     uint16_t tmp;
     int16_t i;
@@ -824,7 +832,7 @@ void ifFunc(int16_t x){     // used as goto if x == 1
 
     progCounter++;
 
-    if(x == 1){
+    if (x == 1) {
         // this is a goto
         progCounter = addr;
     } else {
@@ -878,37 +886,44 @@ void rollFunc(int16_t n)
 }
 
 
-void pushnFunc(){
-  int16_t i;
-  if(progCounter > 9999){
-    i = progBi[progCounter - 10000];
-  } else {
-    i = prog[progCounter];
-  }
-  progCounter = progCounter + 1;
-  pushMathStack(i);
+void pushnFunc(void)
+{
+    int16_t i;
+
+    if (progCounter > 9999) {
+        i = progBi[progCounter - 10000];
+    } else {
+        i = prog[progCounter];
+    }
+
+    progCounter = progCounter + 1;
+    pushMathStack(i);
 }
 
 
-void overFunc(){
-  int16_t i;
-  i = NOS;
-  pushMathStack(i);
+void overFunc(void)
+{
+    pushMathStack(NOS);
 }
 
 
-void dfnFunc(){
-  uint16_t i;
-  // this function adds a new def to the list and creats a new opcode
-  i = 0;
-  while(wordBuffer[i]){
-    cmdList[cmdListIdx++] = wordBuffer[i];
-    i = i + 1;
-  }
-  cmdList[cmdListIdx++] = ' ';
-  cmdList[cmdListIdx] = 0;
-  i = lookupToken(wordBuffer, cmdList);
-  progOpcodes[i] = progIdx;
+void dfnFunc(void)
+{
+    // this function adds a new def to the list and creates a new opcode
+
+    uint16_t i;
+
+    i = 0;
+
+    while (wordBuffer[i]) {
+        cmdList[cmdListIdx++] = wordBuffer[i];
+        i = i + 1;
+    }
+
+    cmdList[cmdListIdx++] = ' ';
+    cmdList[cmdListIdx] = 0;
+    i = lookupToken(wordBuffer, cmdList);
+    progOpcodes[i] = progIdx;
 }
 
 
@@ -943,53 +958,55 @@ void printNumber(register int16_t n)
 }
 
 
-void printHexChar(int16_t n){
-  n &= 0x0F;
-  if(n > 9){
-    n += 7;
-  }
-  n += '0';
-  msp4th_putchar(n);
+void printHexChar(int16_t n)
+{
+    n &= 0x0F;
+
+    if (n > 9) {
+        n += 7;
+    }
+
+    n += '0';
+    msp4th_putchar(n);
 }
 
 
-void printHexByte(int16_t n){
-  n &= 0xFF;
-  printHexChar(n >> 4);
-  printHexChar(n);
+void printHexByte(int16_t n)
+{
+    n &= 0xFF;
+    printHexChar(n >> 4);
+    printHexChar(n);
 }
 
 
-void printHexWord(int16_t n){
-  printHexByte(n >> 8);
-  printHexByte(n);
+void printHexWord(int16_t n)
+{
+    printHexByte(n >> 8);
+    printHexByte(n);
 }
 
 
-void execFunc(){
-  int16_t opcode;
-  opcode = popMathStack();
+void execFunc(void) {
+    int16_t opcode;
 
-  if(opcode > 19999){
-    // this is a built in opcode
-    execN(opcode - 20000);
+    opcode = popMathStack();
 
-  } else if(opcode > 9999){
-
-    pushAddrStack(progCounter);
-    progCounter = cmdList2N[opcode-10000];
-
-  } else {
-
-    pushAddrStack(progCounter);
-    progCounter = progOpcodes[opcode];
-
-  }
-
+    if (opcode > 19999) {
+        // this is a built in opcode
+        execN(opcode - 20000);
+    } else if (opcode > 9999) {
+        // built in interp
+        pushAddrStack(progCounter);
+        progCounter = cmdList2N[opcode-10000];
+    } else {
+        pushAddrStack(progCounter);
+        progCounter = progOpcodes[opcode];
+    }
 }
 
 
-void execN(int16_t opcode){
+void execN(int16_t opcode)
+{
   int16_t i,j,k,m,n;
   int32_t x;
 
@@ -1448,16 +1465,7 @@ void execN(int16_t opcode){
       break;
 
     case 76: // init  ( &config -- ) \ clears buffers and calls msp4th_init
-#if defined(MSP430)
-      //saves 2 words of ROM
-      asm("mov.w #0, %[b](r3)\n"
-          : /* outputs */
-          : [b] "m" (lineBuffer) /* inputs */
-          : /* clobbers */
-         );
-#else
-      *lineBuffer = 0;
-#endif
+      *lineBuffer = 0; // if location is same, the call is recursive otherwise
       msp4th_init((struct msp4th_config *)popMathStack());
       break;
 
