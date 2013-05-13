@@ -137,10 +137,12 @@ const uint8_t cmdListBi[] = {
               "call2 call3 call4 ndrop swpb "       // 61 -> 65
               "+! roll pick tuck max "              // 66 -> 70
               "min s. sh. neg echo "                // 71 -> 75
-              "init o2w "                           // 76 -> 77
+              "init o2w o2p "                       // 76 -> 78
              };
-#define LAST_PREDEFINED 77	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 78	// update this when we add commands to the built in list
 
+#define BUILTIN_OPCODE_OFFSET 20000
+#define BUILTIN_INTERP_OFFSET 10000
 
 // these commands are interps
 const uint8_t cmdListBi2[] = {"[ : var "};
@@ -366,6 +368,8 @@ void pushAddrStack(int16_t n);
 void ndropFunc(void);
 int16_t lookupToken(uint8_t *x, uint8_t *l);
 void luFunc(void);
+void opcode2wordFunc(void);
+void opcode2progFunc(void);
 void numFunc(void);
 void ifFunc(int16_t x);
 void loopFunc(int16_t n);
@@ -414,7 +418,7 @@ void msp4th_init(struct msp4th_config *c)
 
     xit = 0;
     echo = 1;
-    progCounter = 10000;
+    progCounter = BUILTIN_INTERP_OFFSET;
     progIdx = 1;			// this will be the first opcode
     cmdListIdx = 0;
 
@@ -429,8 +433,8 @@ void msp4th_processLoop(void) // this processes the forth opcodes.
     uint16_t tmp;
 
     while(xit == 0){
-        if(progCounter > 9999){
-            tmp = progCounter - 10000;
+        if(progCounter >= BUILTIN_INTERP_OFFSET){
+            tmp = progCounter - BUILTIN_INTERP_OFFSET;
             opcode = progBi[tmp];
         } else {
             opcode = prog[progCounter];
@@ -438,9 +442,9 @@ void msp4th_processLoop(void) // this processes the forth opcodes.
 
         progCounter = progCounter + 1;
 
-        if(opcode > 19999){
+        if(opcode >= BUILTIN_OPCODE_OFFSET){
             // this is a built in opcode
-            execN(opcode - 20000);
+            execN(opcode - BUILTIN_OPCODE_OFFSET);
         } else {
             pushAddrStack(progCounter);
             progCounter = progOpcodes[opcode];
@@ -720,14 +724,14 @@ void luFunc(void)
     opcode = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
 
     if (opcode) {
-        opcode += 20000;
+        opcode += BUILTIN_OPCODE_OFFSET;
         pushMathStack(opcode);
         pushMathStack(1);
     } else {
         // need to test internal interp commands
         opcode = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
         if (opcode) {
-            opcode += 10000;
+            opcode += BUILTIN_INTERP_OFFSET;
             pushMathStack(opcode);
             pushMathStack(1);
         } else {
@@ -743,7 +747,7 @@ void luFunc(void)
 }
 
 
-void opcode2word(void)
+void opcode2wordFunc(void)
 {
     // given an opcode, print corresponding ASCII word name
 
@@ -755,9 +759,6 @@ void opcode2word(void)
     i = 0;
     n = 1; // opcode indices are 1-based
     opcode = popMathStack();
-
-#define BUILTIN_OPCODE_OFFSET 20000
-#define BUILTIN_INTERP_OFFSET 10000
 
     // where is the opcode defined?
     // remove offset
@@ -791,6 +792,20 @@ void opcode2word(void)
     }
 
     msp4th_putchar(' ');
+}
+
+
+void opcode2progFunc(void)
+{
+    // given an opcode, get the start index of prog of it's definition
+
+    if (TOS >= BUILTIN_OPCODE_OFFSET) {
+        TOS = 0;
+    } else if (TOS >= BUILTIN_INTERP_OFFSET) {
+        TOS = 0;
+    } else {
+        TOS = progOpcodes[TOS];
+    }
 }
 
 
@@ -858,8 +873,8 @@ void ifFunc(int16_t x){
     uint16_t tmp;
     int16_t i;
 
-    if(progCounter > 9999){
-        tmp = progCounter - 10000;
+    if(progCounter >= BUILTIN_INTERP_OFFSET){
+        tmp = progCounter - BUILTIN_INTERP_OFFSET;
         addr = progBi[tmp];
     } else {
         addr = prog[progCounter];
@@ -925,8 +940,8 @@ void pushnFunc(void)
 {
     int16_t i;
 
-    if (progCounter > 9999) {
-        i = progBi[progCounter - 10000];
+    if (progCounter >= BUILTIN_INTERP_OFFSET) {
+        i = progBi[progCounter - BUILTIN_INTERP_OFFSET];
     } else {
         i = prog[progCounter];
     }
@@ -1020,13 +1035,13 @@ void execFunc(void) {
 
     opcode = popMathStack();
 
-    if (opcode > 19999) {
+    if (opcode >= BUILTIN_OPCODE_OFFSET) {
         // this is a built in opcode
-        execN(opcode - 20000);
-    } else if (opcode > 9999) {
+        execN(opcode - BUILTIN_OPCODE_OFFSET);
+    } else if (opcode >= BUILTIN_INTERP_OFFSET) {
         // built in interp
         pushAddrStack(progCounter);
-        progCounter = cmdList2N[opcode-10000];
+        progCounter = cmdList2N[opcode - BUILTIN_INTERP_OFFSET];
     } else {
         pushAddrStack(progCounter);
         progCounter = progOpcodes[opcode];
@@ -1499,7 +1514,11 @@ void execN(int16_t opcode)
       break;
 
     case 77: // o2w  ( opcode -- ) \ leaves name of opcode in wordBuffer
-      opcode2word();
+      opcode2wordFunc();
+      break;
+
+    case 78: // o2p  ( opcode -- progIdx ) \ lookup opcode definition, 0 if builtin
+      opcode2progFunc();
       break;
 
     default:
