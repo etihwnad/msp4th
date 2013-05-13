@@ -6,3 +6,8 @@
 \compare range, dump "addr value" only if they do not match
 : cmprange 0x6000 0x4000 do i @ i 0x2000 + @ == not if i pav then loop ;
 cmprange
+
+
+
+: ' ( -- opcode) gw lu not if push0 then ;  \ gets next word, leaves its opcode if found, else 0
+
