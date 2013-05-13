@@ -371,7 +371,6 @@ void ifFunc(int16_t x);
 void loopFunc(int16_t n);
 void rollFunc(int16_t n);
 void pushnFunc(void);
-void overFunc(void);
 void dfnFunc(void);
 void printNumber(int16_t n);
 void printHexChar(int16_t n);
@@ -886,12 +885,6 @@ void pushnFunc(void)
 }
 
 
-void overFunc(void)
-{
-    pushMathStack(NOS);
-}
-
-
 void dfnFunc(void)
 {
     // this function adds a new def to the list and creates a new opcode
@@ -1200,7 +1193,7 @@ void execN(int16_t opcode)
       break;
 
     case 36: // over  ( a b -- a b a )
-      overFunc();
+      pushMathStack(NOS);
       break;
 
     case 37: // push1  ( -- 1 )
