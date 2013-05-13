@@ -137,9 +137,9 @@ const uint8_t cmdListBi[] = {
               "call2 call3 call4 ndrop swpb "       // 61 -> 65
               "+! roll pick tuck max "              // 66 -> 70
               "min s. sh. neg echo "                // 71 -> 75
-              "init "                               // 76
+              "init o2w "                           // 76 -> 77
              };
-#define LAST_PREDEFINED 76	// update this when we add commands to the built in list
+#define LAST_PREDEFINED 77	// update this when we add commands to the built in list
 
 
 // these commands are interps
@@ -740,6 +740,57 @@ void luFunc(void)
             }
         }
     }
+}
+
+
+void opcode2word(void)
+{
+    // given an opcode, print corresponding ASCII word name
+
+    int16_t i;
+    int16_t n;
+    int16_t opcode;
+    uint8_t *list;
+
+    i = 0;
+    n = 1; // opcode indices are 1-based
+    opcode = popMathStack();
+
+#define BUILTIN_OPCODE_OFFSET 20000
+#define BUILTIN_INTERP_OFFSET 10000
+
+    // where is the opcode defined?
+    // remove offset
+    if (opcode >= BUILTIN_OPCODE_OFFSET) {
+        list = (uint8_t *)cmdListBi;
+        opcode -= BUILTIN_OPCODE_OFFSET;
+    } else if (opcode >= BUILTIN_INTERP_OFFSET) {
+        list = (uint8_t *)cmdListBi2;
+        opcode -= BUILTIN_INTERP_OFFSET;
+    } else {
+        list = cmdList;
+    }
+
+    // walk list to get word
+    // skip to start of the expected location
+    while (n < opcode) {
+        while (list[i] > ' ') {
+            i++;
+        }
+        i++;
+        n++;
+    }
+
+    if (list[i] !=0) {
+        // not end of list, print next word
+        while (list[i] > ' ') {
+            msp4th_putchar(list[i++]);
+        }
+    } else {
+        msp4th_putchar('?');
+    }
+
+    msp4th_putchar(' ');
 }
 
 
@@ -1445,6 +1496,10 @@ void execN(int16_t opcode)
     case 76: // init  ( &config -- ) \ clears buffers and calls msp4th_init
       *lineBuffer = 0; // if location is same, the call is recursive otherwise
       msp4th_init((struct msp4th_config *)popMathStack());
+      break;
+
+    case 77: // o2w  ( opcode -- ) \ leaves name of opcode in wordBuffer
+      opcode2word();
       break;
 
     default:
