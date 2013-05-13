@@ -675,57 +675,42 @@ void ndropFunc(void)
 }
 
 
-int16_t lookupToken(uint8_t *x, uint8_t *l) // looking for x in l
+int16_t lookupToken(uint8_t *word, uint8_t *list)
 {
-    int16_t i,j,k,n;
+    // looking for word in list
+    // Matches FIRST OCCURENCE of word in list
+
+    int16_t i;
+    int16_t j;
+    int16_t k;
+    int16_t n;
 
     i = 0;
     j = 0;
     k = 0;
     n = 1;
 
-    while (l[i] != 0) {
-        if (x[j] != 0) {
-            // we expect the next char to match
-            if (l[i] == ' ') {
-                // can't match x is longer than the one we were looking at
-                j = 0;
-                n++;
-                while (l[i] > ' ') {
-                    i++;
-                }
-            } else {
-                if (l[i] == x[j]) {
-                    j++;
-                } else {
-                    j = 0;
-                    while (l[i] > ' ') {
-                        i++;
-                    }
-                    n++;
-                }
-            }
+#define CONSUMETO(c) do { while (list[i] > c) { i++; } } while (0)
+    while (list[i] != 0) {
+        if ((word[j] != 0) && (list[i] == word[j])) {
+            // keep matching
+            j++;
+        } else if ((word[j] == 0) && (list[i] == ' ')){
+            // end of word, match iff it's the end of the list item
+            k = n;
+            //just break the while early
+            break;
         } else {
-            // ran out of input ... did we hit the space we expected???
-            if (l[i] == ' ') {
-                // we found it.
-                k = n;
-                while (l[i] != 0) {
-                    i++;
-                }
-            } else {
-                // missed it
-                j = 0;
-                n++;
-                while (l[i] > ' ') {
-                    i++;
-                }
-            }
+            j = 0;
+            n++;
+            CONSUMETO(' ');
         }
+
         i++;
     }
 
     return(k);
+#undef CONSUMETO
 }
 
 
