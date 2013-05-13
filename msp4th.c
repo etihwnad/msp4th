@@ -716,25 +716,25 @@ int16_t lookupToken(uint8_t *word, uint8_t *list)
 
 void luFunc(void)
 {
-    int16_t i;
+    int16_t opcode;
 
-    i = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
+    opcode = lookupToken(wordBuffer, (uint8_t *)cmdListBi);
 
-    if (i) {
-        i += 20000;
-        pushMathStack(i);
+    if (opcode) {
+        opcode += 20000;
+        pushMathStack(opcode);
         pushMathStack(1);
     } else {
         // need to test internal interp commands
-        i = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
-        if (i) {
-            i += 10000;
-            pushMathStack(i);
+        opcode = lookupToken(wordBuffer, (uint8_t *)cmdListBi2);
+        if (opcode) {
+            opcode += 10000;
+            pushMathStack(opcode);
             pushMathStack(1);
         } else {
-            i = lookupToken(wordBuffer, cmdList);
-            if (i) {
-                pushMathStack(i);
+            opcode = lookupToken(wordBuffer, cmdList);
+            if (opcode) {
+                pushMathStack(opcode);
                 pushMathStack(1);
             } else {
                 pushMathStack(0);
