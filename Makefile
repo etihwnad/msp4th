@@ -133,6 +133,9 @@ bootrom.rcf: $(SOURCES) flashboot.s
 	$(MAKE) -B DEFINE=-DBOOTROM LDSCRIPT=ldscript_ns430_bootrom all
 	../ihex2rcf.py --width=16 --start=0x3000 --length=0x1000 --default=0x0000 main.hex > $@
 
+pc4th: test4th.c msp4th.c msp4th.h
+	gcc -Wall -o pc4th test4th.c msp4th.c
+
 .PHONY:	flash
 flash: $(TARGET).hex
 	./flash.py $(ERASE) $(TARGET).hex
@@ -144,4 +147,5 @@ clean:
 	$(RM) $(TARGET).{elf,hex,txt,map,xout}
 	$(RM) $(SOURCES:.c=.lst)
 	$(RM) $(DEPEND)
+	$(RM) pc4th
 
