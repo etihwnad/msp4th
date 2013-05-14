@@ -499,6 +499,10 @@ void getLine(void)
         } else {
             if (echo) {
                 msp4th_putchar(c);
+
+                if (c == '\r') {
+                    msp4th_putchar('\n');
+                }
             }
 
             if ( (c == '\r') ||
@@ -506,8 +510,6 @@ void getLine(void)
                  (lineBufferIdx >= (lineBufferLength - 1))) { // prevent overflow of line buffer
 
                 waiting = 0;
-
-                if (echo) { msp4th_putchar('\n'); }
             }
 
             lineBuffer[lineBufferIdx++] = c;
