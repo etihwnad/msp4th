@@ -1380,13 +1380,17 @@ void execN(int16_t opcode)
 
     case 59: // call0  ( &func -- *func() )
       i = TOS;
+GCC_DIAG_OFF(int-to-pointer-cast);
       TOS = (*(int16_t(*)(void)) i) ();
+GCC_DIAG_ON(int-to-pointer-cast);
       break;
 
     case 60: // call1  ( a &func -- *func(a) )
       i = TOS;
       j = NOS;
+GCC_DIAG_OFF(int-to-pointer-cast);
       NOS = (*(int16_t(*)(int16_t)) i) (j);
+GCC_DIAG_ON(int-to-pointer-cast);
       popMathStack();
       break;
 
@@ -1394,7 +1398,9 @@ void execN(int16_t opcode)
       i = TOS;
       j = NOS;
       k = STACK(2);
+GCC_DIAG_OFF(int-to-pointer-cast);
       STACK(2) = (*(int16_t(*)(int16_t, int16_t)) i) (k, j);
+GCC_DIAG_ON(int-to-pointer-cast);
       TOS = 1;
       ndropFunc();
       break;
@@ -1404,7 +1410,9 @@ void execN(int16_t opcode)
       j = NOS;
       k = STACK(2);
       m = STACK(3);
+GCC_DIAG_OFF(int-to-pointer-cast);
       STACK(3) = (*(int16_t(*)(int16_t, int16_t, int16_t)) i) (m, k, j);
+GCC_DIAG_ON(int-to-pointer-cast);
       TOS = 2;
       ndropFunc();
       break;
@@ -1415,7 +1423,9 @@ void execN(int16_t opcode)
       k = STACK(2);
       m = STACK(3);
       n = STACK(4);
+GCC_DIAG_OFF(int-to-pointer-cast);
       STACK(4) = (*(int16_t(*)(int16_t, int16_t, int16_t, int16_t)) i) (n, m, k, j);
+GCC_DIAG_ON(int-to-pointer-cast);
       TOS = 3;
       ndropFunc();
       break;
@@ -1501,7 +1511,9 @@ void execN(int16_t opcode)
 
     case 76: // init  ( &config -- ) \ clears buffers and calls msp4th_init
       *lineBuffer = 0; // if location is same, the call is recursive otherwise
+GCC_DIAG_OFF(int-to-pointer-cast);
       msp4th_init((struct msp4th_config *)popMathStack());
+GCC_DIAG_ON(int-to-pointer-cast);
       break;
 
     case 77: // o2w  ( opcode -- ) \ leaves name of opcode in wordBuffer
