@@ -687,7 +687,6 @@ int16_t lookupToken(uint8_t *word, uint8_t *list)
     k = 0;
     n = 1;
 
-#define CONSUMETO(c) do { while (list[i] > c) { i++; } } while (0)
     while (list[i] != 0) {
         if ((word[j] != 0) && (list[i] == word[j])) {
             // keep matching
@@ -700,14 +699,15 @@ int16_t lookupToken(uint8_t *word, uint8_t *list)
         } else {
             j = 0;
             n++;
-            CONSUMETO(' ');
+            while (list[i] > ' ') {
+                i++;
+            }
         }
 
         i++;
     }
 
     return(k);
-#undef CONSUMETO
 }
 
 
