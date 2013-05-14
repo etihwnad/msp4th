@@ -496,12 +496,6 @@ void getLine(void)
             msp4th_putchar(' ');
             msp4th_putchar('\b');
             lineBufferIdx--;
-        } else if ( ((c == 255) || (c == '')) && (lineBufferIdx == 0)) {
-            xit = 1;
-            waiting = 0;
-            // add a sham word so we make it back to processLoop() to exit
-            lineBuffer[lineBufferIdx++] = 'x';
-            lineBuffer[lineBufferIdx] = ' ';
         } else {
             if (echo) {
                 msp4th_putchar(c);
@@ -751,12 +745,10 @@ void opcode2wordFunc(void)
 {
     // given an opcode, print corresponding ASCII word name
 
-    int16_t i;
     int16_t n;
     int16_t opcode;
     uint8_t *list;
 
-    i = 0;
     n = 1; // opcode indices are 1-based
     opcode = popMathStack();
 
@@ -775,17 +767,16 @@ void opcode2wordFunc(void)
     // walk list to get word
     // skip to start of the expected location
     while (n < opcode) {
-        while (list[i] > ' ') {
-            i++;
+        while (*list >= ' ') {
+            list++;
         }
-        i++;
         n++;
     }
 
-    if (list[i] !=0) {
+    if (*list != 0) {
         // not end of list, print next word
-        while (list[i] > ' ') {
-            msp4th_putchar(list[i++]);
+        while (*list > ' ') {
+            msp4th_putchar(*list++);
         }
     } else {
         msp4th_putchar('?');
@@ -799,9 +790,8 @@ void opcode2progFunc(void)
 {
     // given an opcode, get the start index of prog of it's definition
 
-    if (TOS >= BUILTIN_OPCODE_OFFSET) {
-        TOS = 0;
-    } else if (TOS >= BUILTIN_INTERP_OFFSET) {
+    if (TOS >= BUILTIN_INTERP_OFFSET) {
+        // catches both OPCODE and INTERP_OFFSET
         TOS = 0;
     } else {
         TOS = progOpcodes[TOS];
