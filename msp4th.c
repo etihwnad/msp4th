@@ -767,9 +767,10 @@ void opcode2wordFunc(void)
     // walk list to get word
     // skip to start of the expected location
     while (n < opcode) {
-        while (*list >= ' ') {
+        while (*list > ' ') {
             list++;
         }
+        list++;
         n++;
     }
 
@@ -1007,7 +1008,6 @@ void printHexChar(int16_t n)
 
 void printHexByte(int16_t n)
 {
-    n &= 0xFF;
     printHexChar(n >> 4);
     printHexChar(n);
 }
@@ -1015,7 +1015,8 @@ void printHexByte(int16_t n)
 
 void printHexWord(int16_t n)
 {
-    printHexByte(n >> 8);
+    // suppress sign bit extension
+    printHexByte((uint16_t)n >> 8);
     printHexByte(n);
 }
 
