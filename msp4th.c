@@ -59,7 +59,7 @@ int16_t cmdListIdx;    // next open space for user word strings
 
 /* The following allow re-configuring the location/size of all configurable
  * arrays.  Then the stack sizes and user program space sizes can be
- * (re-)specified by changing the table and calling init_msp4th() again.  See
+ * (re-)specified by changing the table and calling msp4th_init() again.  See
  * test430.c for a configuration example.
  *
  * THE ONLY BOUNDARY CHECKS ARE:
@@ -398,7 +398,7 @@ void msp4th_init(struct msp4th_config *c)
      * table locations.
      *
      * Changing the values in the msp4th_* locations and calling
-     * init_msp4th() again restarts the interpreter with the new layout;
+     * msp4th_init() again restarts the interpreter with the new layout;
      */
     mathStackPtr = c->mathStackStart;
     addrStackPtr = c->addrStackStart;
@@ -525,10 +525,9 @@ uint8_t nextPrintableChar(void)
 {
     uint8_t c;
 
-    c = getKeyB();
-    while (c <= ' ') {
+    do {
         c = getKeyB();
-    }
+    } while (c <= ' ');
 
     return (c);
 }
@@ -538,10 +537,9 @@ uint8_t skipStackComment(void)
 {
     uint8_t c;
 
-    c = getKeyB();
-    while (c != ')') {
+    do {
         c = getKeyB();
-    }
+    } while (c != ')');
 
     c = nextPrintableChar();
 
@@ -894,17 +892,14 @@ void loopFunc(int16_t n)
 #define k ANOS      // count
 #define m ASTACK(2) // limit
 
-    ANOS += n;     // inc/dec the count
+    k += n;     // inc/dec the count
 
-    if ( ! (   ((n >= 0) && (k >= m))
-            || ((n <= 0) && (k <= m)))) {
+    if (((n > 0) && (k < m)) || ((n < 0) && (k > m))) {
         // loop
         progCounter = j;
     } else {
         // done, cleanup
-        popAddrStack();
-        popAddrStack();
-        popAddrStack();
+        addrStackPtr += 3;
     }
 #undef j
 #undef k

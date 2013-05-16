@@ -136,9 +136,12 @@ static __inline__ void setup_default_msp4th(void)
     default_config.getchar = &uart_getchar;
     default_config.puts = &uart_puts;
 
+    // stack top is zero
+    mathStackArray[MATH_STACK_SIZE - 1] = 0;
+
     // terminate the strings
     lineBufferArray[0] = 0;
-    wordBufferArray[0] = 0;
+    //wordBufferArray[0] = 0;
     cmdListArray[0] =0;
 
 

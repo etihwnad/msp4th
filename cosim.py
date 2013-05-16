@@ -70,18 +70,8 @@ try:
         s += '\r'
 
         for n in (pc, atoi):
-        #for n in (pc, ):
             send(n, s)
-            if s.startswith('bye'):
-                #things don't match after this
-                break
             prompt(n)
-
-        if 0:
-            print
-            print 's   :', s.rstrip()
-            print 'pc  :', pc.before
-            print 'atoi:', atoi.before
 
         print_side(atoi.before, pc.before)
 

@@ -6,12 +6,25 @@
 
 
 
+/*
+ * msp4th settings
+ */
 #define MATH_STACK_SIZE 32
 #define ADDR_STACK_SIZE 64
-#define CMD_LIST_SIZE 128
-#define PROG_SPACE 256
-#define USR_OPCODE_SIZE 32
+
+//total length of all user programs in opcodes
+#define USER_PROG_SIZE 256
+
+//max number of user-defined words
+#define USER_OPCODE_MAPPING_SIZE 32
+
+//total string length of all word names (+ 1x<space> each)
+#define USER_CMD_LIST_SIZE 128
+
+//maximum input line length
 #define LINE_BUFFER_SIZE 128
+
+//maximum word character width
 #define WORD_BUFFER_SIZE 32
 
 
@@ -21,11 +34,11 @@
  */
 int16_t mathStackArray[MATH_STACK_SIZE];
 int16_t addrStackArray[ADDR_STACK_SIZE];
-int16_t progArray[USR_OPCODE_SIZE];
-int16_t progOpcodesArray[USR_OPCODE_SIZE];
-uint8_t cmdListArray[CMD_LIST_SIZE];
-uint8_t lineBufferArray[CMD_LIST_SIZE];
-uint8_t wordBufferArray[CMD_LIST_SIZE];
+int16_t progArray[USER_PROG_SIZE];
+int16_t progOpcodesArray[USER_OPCODE_MAPPING_SIZE];
+uint8_t cmdListArray[USER_CMD_LIST_SIZE];
+uint8_t lineBufferArray[LINE_BUFFER_SIZE];
+uint8_t wordBufferArray[WORD_BUFFER_SIZE];
 
 struct msp4th_config config;
 
@@ -66,9 +79,12 @@ void config_msp4th(void)
     config.getchar = &my_getchar;
     config.puts = &my_puts;
 
+    // stack top is zero
+    mathStackArray[MATH_STACK_SIZE - 1] = 0;
+
     // terminate the strings
     lineBufferArray[0] = 0;
-    wordBufferArray[0] = 0;
+    //wordBufferArray[0] = 0;
     cmdListArray[0] = 0;
 
 
