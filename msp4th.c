@@ -133,7 +133,7 @@ const uint8_t cmdListBi[] = {
               "@ ! h@ do loop "                     // 41 -> 45
               "+loop i j k ~ "                      // 46 -> 50
               "^ & | */ key "                       // 51 -> 55
-              "cr 2* 2/ call0 call1 "               // 56 -> 60
+              "cr *2 /2 call0 call1 "               // 56 -> 60
               "call2 call3 call4 ndrop swpb "       // 61 -> 65
               "+! roll pick tuck max "              // 66 -> 70
               "min s. sh. neg echo "                // 71 -> 75
