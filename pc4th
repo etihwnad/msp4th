@@ -1,7 +1,17 @@
 #!/bin/bash
 
-make _pc4th >/dev/null && (
-    OLD_STTY=$(stty -g)
+OLD_STTY=$(stty -g)
+
+function cleanup {
+    stty "$OLD_STTY"
+    exit $1
+}
+
+trap cleanup SIGHUP SIGINT SIGTERM
+
+make _pc4th >/dev/null
+
+if [ $? -eq 0 ]; then
     stty cbreak
     stty -echo
     stty -icrnl
@@ -11,6 +21,6 @@ make _pc4th >/dev/null && (
     else
         ./_pc4th < $1
     fi
+fi
 
-    stty "$OLD_STTY"
-    )
+cleanup $?
