@@ -1141,7 +1141,7 @@ void execN(int16_t opcode)
       }
       break;      
 
-    case 13: // .hb  ( a -- )
+    case 13: // hb.  ( a -- )
       printHexByte(popMathStack());
       msp4th_putchar(' ');
       break;
@@ -1214,7 +1214,7 @@ void execN(int16_t opcode)
       pushMathStack(mathStackStart - mathStackPtr);
       break;
       
-    case 28: // .h  ( a -- )
+    case 28: // h.  ( a -- )
       printHexWord(popMathStack());
       msp4th_putchar(' ');
       break;
