@@ -611,8 +611,8 @@ void pushMathStack(int16_t n)
 {
 #if defined(MSP430)
     asm("decd %[ms]\n"
-        "mov %[n],  @%[ms]\n"
-        : /* outputs */
+        "mov %[n],  @%[mso]\n"
+        : /* outputs */ [mso] "+r" (mathStackPtr)
         : /* inputs */ [n] "r" (n), [ms] "r" (mathStackPtr)
         : /* clobbers */
        );
@@ -633,8 +633,8 @@ int16_t popAddrStack(void)
 
 #if defined(MSP430)
     asm("mov @%[as],  %[out]\n"
-        "incd %[as]\n"
-        : /* outputs */ [out] "=r" (i)
+        "incd %[aso]\n"
+        : /* outputs */ [out] "=r" (i), [aso] "+r" (addrStackPtr)
         : /* inputs */  [as] "r" (addrStackPtr)
         : /* clobbers */
        );
@@ -651,8 +651,8 @@ void pushAddrStack(int16_t n)
 {
 #if defined(MSP430)
     asm("decd %[as]\n"
-        "mov %[n],  @%[as]\n"
-        : /* outputs */
+        "mov %[n],  @%[aso]\n"
+        : /* outputs */ [aso] "+r" (addrStackPtr)
         : /* inputs */ [n] "r" (n), [as] "r" (addrStackPtr)
         : /* clobbers */
        );
@@ -1082,9 +1082,9 @@ void execN(int16_t opcode)
       asm("mov 2(%[ms]), r12\n"
           "mov 0(%[ms]), r10\n"
           "call #__divmodhi4\n"
-          "mov r12, 2(%[ms])\n"
-          "mov r14, 0(%[ms])\n"
-          : /* outputs */
+          "mov r12, 2(%[mso])\n"
+          "mov r14, 0(%[mso])\n"
+          : [mso] "+r" (mathStackPtr) /* outputs */
           : [ms] "r" (mathStackPtr) /* inputs */
           : /* clobbers */ "r10","r11","r12","r13","r14"
          );
@@ -1433,7 +1433,7 @@ GCC_DIAG_ON(int-to-pointer-cast);
 
     case 65: // swpb  ( n -- n ) \ byteswap TOS
 #if defined(MSP430)
-      asm("swpb %[s]\n":  : [s] "r" (mathStackPtr) :);
+      asm("swpb %[s]\n": [s] "+r" (mathStackPtr) : : );
 #else
       TOS = ((TOS >> 8) & 0x00ff) | ((TOS << 8) & 0xff00);
 #endif
