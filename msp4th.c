@@ -119,7 +119,7 @@ void (*msp4th_puts)(uint8_t *s); // the sole interactive output avenue
  *
  ***************************************************************************/
 
-// The order matches the execN function and determines the opcode value.
+// The order matches the execVM function and determines the opcode value.
 // NOTE: must end in a space !!!!
 const uint8_t cmdListBi[] = {
               "bye + - * /% "                       // 1 -> 5
@@ -161,14 +161,14 @@ const int16_t progBi[] = { // address actually start at 10000
    20014,        //   1 gw      get word
    20030,        //   2 num     test if number
    20022,10008,  //   3 if
- 
+
    20031,        //   5 push0    push a zero on math stack
    20032,10030,  //   6 goto     jump to until function
 
    20008,        //   8 drop
    20034,        //   9 lu       look up word
    20022,10026,  //  10 if       did we find the word in the dictionary
-   
+
    20035,']',    //  12 pushn    next value on math stack  look for ]
 
    20036,        //  14 over
@@ -176,47 +176,47 @@ const int16_t progBi[] = { // address actually start at 10000
    20022,10022,  //  16 if
 
    20008,        //  18 drop     it was the ']' exit function
-   20037,        //  19 push1    put a true on the math stack 
+   20037,        //  19 push1    put a true on the math stack
    20032,10030,  //  20 goto     jump to until func
 
    20033,        //  22 exec     execute the function on the math stack (it is a call so we return to here)
    20031,        //  23 push0
    20032,10030,  //  24 goto     jump to until func
-   
+
    // undefined string
-   
+
    20035,'?',    //  26 pushn    put the '?' on math stack
    20039,        //  28 emit     output the ? to the terminal
    20031,        //  29 push0
-   
+
    20026,        //  30 until
-   20040,        //  31 return function   
+   20040,        //  31 return function
 
 
 
    // this is the ':' function hand compiled
-   
+
    20035,0x5555, //  32 just push a known value on the stack, will test at the end
    20014,        //  34 get a word from the input
 
    20015,        //  35 define it
    20025,        //  36 begin
 
-   20014,        //  37 get a word 
+   20014,        //  37 get a word
    20030,        //  38 see if number
    20022,10047,  //  39 if
-   
+
    // it is a number
-   
+
    20035,20035,  //  41 put the push next number opcode on stack
    20017,        //  43 put that opcode in the def
    20017,        //  44 put the actual value next
    20031,        //  45 push 0
    20026,        //  46 until     // we can have many untils for one begin
-   
+
    // wasn't a number, we need to test for many other things
 
-   20008,        //  47 drop   
+   20008,        //  47 drop
    20034,        //  48 look in dictionary
    20020,        //  49 not
 
@@ -227,14 +227,14 @@ const int16_t progBi[] = { // address actually start at 10000
    20038,        //  55 tell them what we couldn't find
    20031,        //  56 push0
    20026,        //  57 until
-   
+
    // we found it in the dictionary
-   
+
    20035,20022,  //  58 pushn     see if it is an if function
    20036,        //  60 over
    20012,        //  61 equal
    20022,10070,  //  62 if
-   
+
    // it is an if function
 
    20017,        //  64 append the if statement to the stack (it was still on the stack
@@ -243,16 +243,16 @@ const int16_t progBi[] = { // address actually start at 10000
    20017,        //  67 append it to memory
    20031,        //  68 push0
    20026,        //  69 until
-   
-   // ********************** 
-     
+
+   // **********************
+
    20035,20024,  //  70 pushn     see if it is an "else" function
    20036,        //  72 over
    20012,        //  73 equal
    20022,10088,  //  74 if
-   
+
     //  it is an "else" statement
-    
+
    20035,20032,  //  76 push a goto command on the math stack
    20017,        //  78 append it to the program
    20043,        //  79 h@ get location of next free word
@@ -264,8 +264,8 @@ const int16_t progBi[] = { // address actually start at 10000
    20019,        //  85 !    this will be in prog space
    20031,        //  86 push0
    20026,        //  87 until
-   
-   // *******************************   
+
+   // *******************************
 
    20035,20023,  //  88 pushn    see if it is a "then" function
 
@@ -281,36 +281,36 @@ const int16_t progBi[] = { // address actually start at 10000
    20019,        //  97 !
    20031,        //  98 push0
    20026,        //  99 until
-   
+
    // *********************************
-   
+
    20035,10001,  // 100 pushn    see if it is a "[" function
 
    20036,        // 102 over
-   20012,        // 103 equal   
+   20012,        // 103 equal
    20022,10109,  // 104 if
 
       // it is a "["
-   
+
    10001,        // 106 recurse into the monitor
    20031,        // 107 push0
    20026,        // 108 until
-   
-   // ********************************************   
-   
+
+   // ********************************************
+
    20035,20040,  // 109 pushn    next value on math stack  look for built in func ';'
 
    20036,        // 111 over
    20012,        // 112 equal    test if function was a ';'
    20020,        // 113 not
-   20022,10119,  // 114 if      
+   20022,10119,  // 114 if
 
          // this must be just an ordinary function ..... just push it in the prog
 
-   20017,        // 116 append   
+   20017,        // 116 append
    20031,        // 117 push0
    20026,        // 118 until
-   
+
    //  must be the ';'
 
    20017,        // 119 append return function to prog
@@ -319,7 +319,7 @@ const int16_t progBi[] = { // address actually start at 10000
    20012,        // 122 equal
    20020,        // 123 not
    20022,10132,  // 124 if
-   
+
    20035,'?',    // 126 push a '?' on the stack
    20039,        // 128 emit
    20035,'s',    // 129 push a 's' on the stack
@@ -332,21 +332,21 @@ const int16_t progBi[] = { // address actually start at 10000
 
    // ***********************************************
    // var    create a variable
-   
+
    20043,        // 135 get address of variable
    20031,        // 136 push0
    20017,        // 137 append  ","
-   
+
    20014,        // 138 get a word from the input
    20015,        // 139 define it
    20035,20035,  // 140 put the push next number opcode on stack
-   20017,        // 142 append the pushn instruction    
+   20017,        // 142 append the pushn instruction
    20017,        // 143 append the address we want to push
    20035,20040,  // 144 put a return instruction on stack
    20017,        // 146 put the return instruction in prog
    20040,        // 147 return
-   
-   };   
+
+   };
 
 
 
@@ -354,114 +354,162 @@ const int16_t progBi[] = { // address actually start at 10000
  *
  * Local function prototypes
  *
+ * xFunc() are closely related to opcodes
+ *
+ * Note: push/pop and such may be candidates for making non-static (public)
  ***************************************************************************/
+/****************************************************************************
+ * Stack implementation
+ ***************************************************************************/
+static void pushMathStack(int16_t n);
+static int16_t popMathStack(void);
+static void ndrop(int16_t n);
 
-uint8_t getKeyB(void);
-void getLine(void);
-uint8_t nextPrintableChar(void);
-uint8_t skipStackComment(void);
-void getWord(void);
-void listFunction(void);
-int16_t popMathStack(void);
-void pushMathStack(int16_t n);
-void ndrop(int16_t n);
-int16_t popAddrStack(void);
-void pushAddrStack(int16_t n);
-void ndropAddr(int16_t n);
-int16_t lookupToken(uint8_t *x, uint8_t *l);
-void luFunc(void);
-void opcode2wordFunc(void);
-void opcode2progFunc(void);
-void numFunc(void);
-void ifFunc(int16_t x);
-void loopFunc(int16_t n);
-void rollFunc(int16_t n);
-void pushnFunc(void);
-void dfnFunc(void);
-void printNumber(int16_t n);
-void printHexChar(int16_t n);
-void printHexByte(int16_t n);
-void printHexWord(int16_t n);
-void execN(int16_t n);
-void execFunc(void);
+static void pushAddrStack(int16_t n);
+static int16_t popAddrStack(void);
+static void ndropAddr(int16_t n);
+
+/****************************************************************************
+ * Line input handling
+ ***************************************************************************/
+static uint8_t getKeyB(void);
+static void getLine(void);
+static uint8_t nextPrintableChar(void);
+static uint8_t skipStackComment(void);
+
+/****************************************************************************
+ * Word buffer usage
+ ***************************************************************************/
+static int16_t lookupToken(uint8_t *x, uint8_t *l);
+static void dfnFunc(void);
+static void getWordFunc(void);
+static void luFunc(void);
+static void numFunc(void);
+
+/****************************************************************************
+ * Terminal output effects
+ ***************************************************************************/
+static void printNumber(int16_t n);
+static void printHexChar(int16_t n);
+static void printHexByte(int16_t n);
+static void printHexWord(int16_t n);
+static void listFunc(void);
+static void opcode2wordFunc(void);
+
+/****************************************************************************
+ * Other helpers
+ ***************************************************************************/
+static void execFunc(void);
+static void ifFunc(int16_t x);
+static void loopFunc(int16_t n);
+static void opcode2progFunc(void);
+static void pushnFunc(void);
+static void rollFunc(int16_t n);
+
+/****************************************************************************
+ * VM opcode execution
+ ***************************************************************************/
+static void execVM(int16_t opcode);
 
 
 
 /****************************************************************************
- *
- * Public functions
- *
+ * Stack implementation
  ***************************************************************************/
+#define TOS (*mathStackPtr)
+#define NOS (*(mathStackPtr + 1))
+#define STACK(n) (*(mathStackPtr + n))
 
-void msp4th_init(struct msp4th_config *c)
+void pushMathStack(int16_t n)
 {
-    /*
-     * Get addresses of user-configurable arrays from the pre-known vector
-     * table locations.
-     *
-     * Changing the values in the msp4th_* locations and calling
-     * msp4th_init() again restarts the interpreter with the new layout;
-     */
-    mathStackPtr = c->mathStackStart;
-    addrStackPtr = c->addrStackStart;
-    mathStackStart = c->mathStackStart;
-    addrStackStart = c->addrStackStart;
-    prog = c->prog;
-    progOpcodes = c->progOpcodes;
-    cmdList = c->cmdList;
-    lineBuffer = c->lineBuffer;
-    lineBufferLength = c->lineBufferLength;
-    wordBuffer = c->wordBuffer;
-    wordBufferLength = c->wordBufferLength;
-    msp4th_putchar = c->putchar;
-    msp4th_getchar = c->getchar;
-    msp4th_puts = c->puts;
-
-
-    xit = 0;
-    echo = 1;
-    progCounter = BUILTIN_INTERP_OFFSET;
-    progIdx = 1;			// this will be the first opcode
-    cmdListIdx = 0;
-
-    lineBufferIdx = 0;
-    msp4th_puts((uint8_t *)"msp4th!");
+#if defined(MSP430)
+    asm("decd %[ms]\n"
+        "mov %[n],  @%[mso]\n"
+        : /* outputs */ [mso] "+r" (mathStackPtr)
+        : /* inputs */ [n] "r" (n), [ms] "r" (mathStackPtr)
+        : /* clobbers */
+       );
+#else
+    mathStackPtr--;
+    *mathStackPtr = n;
+#endif
 }
 
 
-void msp4th_processLoop(void) // this processes the forth opcodes.
+int16_t popMathStack(void)
 {
-    uint16_t opcode;
-    uint16_t tmp;
+    int16_t i;
 
-    while(xit == 0){
-        if(progCounter >= BUILTIN_INTERP_OFFSET){
-            tmp = progCounter - BUILTIN_INTERP_OFFSET;
-            opcode = progBi[tmp];
-        } else {
-            opcode = prog[progCounter];
-        }
+    i = *mathStackPtr;
 
-        progCounter = progCounter + 1;
+    // prevent stack under-flow
+    if (mathStackPtr < mathStackStart) {
+        mathStackPtr++;
+    }
 
-        if(opcode >= BUILTIN_OPCODE_OFFSET){
-            // this is a built in opcode
-            execN(opcode - BUILTIN_OPCODE_OFFSET);
-        } else {
-            pushAddrStack(progCounter);
-            progCounter = progOpcodes[opcode];
-        }
-    } // while ()
+    return(i);
 }
 
+
+void ndrop(int16_t n)
+{
+    mathStackPtr += n;
+
+    if (mathStackPtr > mathStackStart) {
+        mathStackPtr = mathStackStart;
+    }
+}
+
+
+#define ATOS (*addrStackPtr)
+#define ANOS (*(addrStackPtr + 1))
+#define ASTACK(n) (*(addrStackPtr + n))
+
+void pushAddrStack(int16_t n)
+{
+#if defined(MSP430)
+    asm("decd %[as]\n"
+        "mov %[n],  @%[aso]\n"
+        : /* outputs */ [aso] "+r" (addrStackPtr)
+        : /* inputs */ [n] "r" (n), [as] "r" (addrStackPtr)
+        : /* clobbers */
+       );
+#else
+    addrStackPtr--;
+    *addrStackPtr = n;
+#endif
+}
+
+
+int16_t popAddrStack(void)
+{
+    int16_t i;
+
+#if defined(MSP430)
+    asm("mov @%[as],  %[out]\n"
+        "incd %[aso]\n"
+        : /* outputs */ [out] "=r" (i), [aso] "+r" (addrStackPtr)
+        : /* inputs */  [as] "r" (addrStackPtr)
+        : /* clobbers */
+       );
+#else
+    i = *addrStackPtr;
+    addrStackPtr++;
+#endif
+
+    return(i);
+}
+
+
+void ndropAddr(int16_t n)
+{
+    addrStackPtr += n;
+}
 
 
 /****************************************************************************
- *
- * The rest of the implementation
- *
+ * Line input handling
  ***************************************************************************/
-
 uint8_t getKeyB(void)
 {
     uint8_t c;
@@ -549,138 +597,9 @@ uint8_t skipStackComment(void)
 }
 
 
-void getWord(void)
-{
-    int16_t k;
-    uint8_t c;
-
-    k = 0;
-    c = nextPrintableChar();
-
-    // ignore comments
-    while ((c == '(') || (c == 92)) {
-        switch (c) {
-            case '(': // '(' + anything + ')'
-                c = skipStackComment();
-                break;
-
-            case 92: // '\' backslash -- to end of line
-                getLine();
-                c = nextPrintableChar();
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    do {
-        wordBuffer[k++] = c;
-        wordBuffer[k] = 0;
-        c = getKeyB();
-    } while ((c > ' ') && (k < wordBufferLength));
-}
-
-
-void listFunction(void)
-{
-    msp4th_puts((uint8_t *)cmdListBi);
-    msp4th_puts((uint8_t *)cmdListBi2);
-    msp4th_puts(cmdList);
-}
-
-
-#define TOS (*mathStackPtr)
-#define NOS (*(mathStackPtr + 1))
-#define STACK(n) (*(mathStackPtr + n))
-
-int16_t popMathStack(void)
-{
-    int16_t i;
-
-    i = *mathStackPtr;
-
-    // prevent stack under-flow
-    if (mathStackPtr < mathStackStart) {
-        mathStackPtr++;
-    }
-
-    return(i);
-}
-
-
-void pushMathStack(int16_t n)
-{
-#if defined(MSP430)
-    asm("decd %[ms]\n"
-        "mov %[n],  @%[mso]\n"
-        : /* outputs */ [mso] "+r" (mathStackPtr)
-        : /* inputs */ [n] "r" (n), [ms] "r" (mathStackPtr)
-        : /* clobbers */
-       );
-#else
-    mathStackPtr--;
-    *mathStackPtr = n;
-#endif
-}
-
-
-void ndrop(int16_t n)
-{
-    mathStackPtr += n;
-
-    if (mathStackPtr > mathStackStart) {
-        mathStackPtr = mathStackStart;
-    }
-}
-
-
-#define ATOS (*addrStackPtr)
-#define ANOS (*(addrStackPtr + 1))
-#define ASTACK(n) (*(addrStackPtr + n))
-
-int16_t popAddrStack(void)
-{
-    int16_t i;
-
-#if defined(MSP430)
-    asm("mov @%[as],  %[out]\n"
-        "incd %[aso]\n"
-        : /* outputs */ [out] "=r" (i), [aso] "+r" (addrStackPtr)
-        : /* inputs */  [as] "r" (addrStackPtr)
-        : /* clobbers */
-       );
-#else
-    i = *addrStackPtr;
-    addrStackPtr++;
-#endif
-
-    return(i);
-}
-
-
-void pushAddrStack(int16_t n)
-{
-#if defined(MSP430)
-    asm("decd %[as]\n"
-        "mov %[n],  @%[aso]\n"
-        : /* outputs */ [aso] "+r" (addrStackPtr)
-        : /* inputs */ [n] "r" (n), [as] "r" (addrStackPtr)
-        : /* clobbers */
-       );
-#else
-    addrStackPtr--;
-    *addrStackPtr = n;
-#endif
-}
-
-
-void ndropAddr(int16_t n)
-{
-    addrStackPtr += n;
-}
-
-
+/****************************************************************************
+ * Word buffer usage
+ ***************************************************************************/
 int16_t lookupToken(uint8_t *word, uint8_t *list)
 {
     // looking for word in list
@@ -720,6 +639,59 @@ int16_t lookupToken(uint8_t *word, uint8_t *list)
 }
 
 
+void dfnFunc(void)
+{
+    // this function adds a new def to the list and creates a new opcode
+
+    uint16_t i;
+
+    i = 0;
+
+    while (wordBuffer[i]) {
+        cmdList[cmdListIdx++] = wordBuffer[i];
+        i = i + 1;
+    }
+
+    cmdList[cmdListIdx++] = ' ';
+    cmdList[cmdListIdx] = 0;
+    i = lookupToken(wordBuffer, cmdList);
+    progOpcodes[i] = progIdx;
+}
+
+
+void getWordFunc(void)
+{
+    int16_t k;
+    uint8_t c;
+
+    k = 0;
+    c = nextPrintableChar();
+
+    // ignore comments
+    while ((c == '(') || (c == 92)) {
+        switch (c) {
+            case '(': // '(' + anything + ')'
+                c = skipStackComment();
+                break;
+
+            case 92: // '\' backslash -- to end of line
+                getLine();
+                c = nextPrintableChar();
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    do {
+        wordBuffer[k++] = c;
+        wordBuffer[k] = 0;
+        c = getKeyB();
+    } while ((c > ' ') && (k < wordBufferLength));
+}
+
+
 void luFunc(void)
 {
     int16_t opcode;
@@ -750,65 +722,6 @@ void luFunc(void)
 }
 
 
-void opcode2wordFunc(void)
-{
-    // given an opcode, print corresponding ASCII word name
-
-    int16_t n;
-    int16_t opcode;
-    uint8_t *list;
-
-    n = 1; // opcode indices are 1-based
-    opcode = popMathStack();
-
-    // where is the opcode defined?
-    // remove offset
-    if (opcode >= BUILTIN_OPCODE_OFFSET) {
-        list = (uint8_t *)cmdListBi;
-        opcode -= BUILTIN_OPCODE_OFFSET;
-    } else if (opcode >= BUILTIN_INTERP_OFFSET) {
-        list = (uint8_t *)cmdListBi2;
-        opcode -= BUILTIN_INTERP_OFFSET;
-    } else {
-        list = cmdList;
-    }
-
-    // walk list to get word
-    // skip to start of the expected location
-    while (n < opcode) {
-        while (*list > ' ') {
-            list++;
-        }
-        list++;
-        n++;
-    }
-
-    if (*list != 0) {
-        // not end of list, print next word
-        while (*list > ' ') {
-            msp4th_putchar(*list++);
-        }
-    } else {
-        msp4th_putchar('?');
-    }
-
-    msp4th_putchar(' ');
-}
-
-
-void opcode2progFunc(void)
-{
-    // given an opcode, get the start index of prog of it's definition
-
-    if (TOS >= BUILTIN_INTERP_OFFSET) {
-        // catches both OPCODE and INTERP_OFFSET
-        TOS = 0;
-    } else {
-        TOS = progOpcodes[TOS];
-    }
-}
-
-
 void numFunc(void)
 {
     // the word to test is in wordBuffer
@@ -827,7 +740,7 @@ void numFunc(void)
     }
 
     if ((wordBuffer[i] >= '0') && (wordBuffer[i] <= '9')) {
-        // it is a number 
+        // it is a number
         isnum = 1;
         // check if hex
         if (wordBuffer[0] == '0' && wordBuffer[1] == 'x') {
@@ -866,108 +779,9 @@ void numFunc(void)
 }
 
 
-void ifFunc(int16_t x){
-    // used as goto if x == 1
-
-    uint16_t addr;
-    uint16_t tmp;
-    int16_t i;
-
-    if(progCounter >= BUILTIN_INTERP_OFFSET){
-        tmp = progCounter - BUILTIN_INTERP_OFFSET;
-        addr = progBi[tmp];
-    } else {
-        addr = prog[progCounter];
-    }
-
-    progCounter++;
-
-    if (x == 1) {
-        // this is a goto
-        progCounter = addr;
-    } else {
-        // this is the "if" processing
-        i = popMathStack();
-        if(i == 0){
-            progCounter = addr;
-        }
-    }
-}
-
-
-void loopFunc(int16_t n)
-{
-#define j ATOS      // loop address
-#define k ANOS      // count
-#define m ASTACK(2) // limit
-
-    k += n;     // inc/dec the count
-
-    if (((n > 0) && (k < m)) || ((n < 0) && (k > m))) {
-        // loop
-        progCounter = j;
-    } else {
-        // done, cleanup
-        ndropAddr(3);
-    }
-#undef j
-#undef k
-#undef m
-}
-
-
-void rollFunc(int16_t n)
-{
-    int16_t *addr;
-    int16_t tmp;
-
-    tmp = STACK(n);
-    addr = (mathStackPtr + n);
-
-    while (addr > mathStackPtr) {
-        *addr = *(addr - 1);
-        addr--;
-    }
-
-    TOS = tmp;
-}
-
-
-void pushnFunc(void)
-{
-    int16_t i;
-
-    if (progCounter >= BUILTIN_INTERP_OFFSET) {
-        i = progBi[progCounter - BUILTIN_INTERP_OFFSET];
-    } else {
-        i = prog[progCounter];
-    }
-
-    progCounter = progCounter + 1;
-    pushMathStack(i);
-}
-
-
-void dfnFunc(void)
-{
-    // this function adds a new def to the list and creates a new opcode
-
-    uint16_t i;
-
-    i = 0;
-
-    while (wordBuffer[i]) {
-        cmdList[cmdListIdx++] = wordBuffer[i];
-        i = i + 1;
-    }
-
-    cmdList[cmdListIdx++] = ' ';
-    cmdList[cmdListIdx] = 0;
-    i = lookupToken(wordBuffer, cmdList);
-    progOpcodes[i] = progIdx;
-}
-
-
+/****************************************************************************
+ * Terminal output effects
+ ***************************************************************************/
 void printNumber(register int16_t n)
 {
     uint16_t nu;
@@ -1027,6 +841,63 @@ void printHexWord(int16_t n)
 }
 
 
+void listFunc(void)
+{
+    msp4th_puts((uint8_t *)cmdListBi);
+    msp4th_puts((uint8_t *)cmdListBi2);
+    msp4th_puts(cmdList);
+}
+
+
+void opcode2wordFunc(void)
+{
+    // given an opcode, print corresponding ASCII word name
+
+    int16_t n;
+    int16_t opcode;
+    uint8_t *list;
+
+    n = 1; // opcode indices are 1-based
+    opcode = popMathStack();
+
+    // where is the opcode defined?
+    // remove offset
+    if (opcode >= BUILTIN_OPCODE_OFFSET) {
+        list = (uint8_t *)cmdListBi;
+        opcode -= BUILTIN_OPCODE_OFFSET;
+    } else if (opcode >= BUILTIN_INTERP_OFFSET) {
+        list = (uint8_t *)cmdListBi2;
+        opcode -= BUILTIN_INTERP_OFFSET;
+    } else {
+        list = cmdList;
+    }
+
+    // walk list to get word
+    // skip to start of the expected location
+    while (n < opcode) {
+        while (*list > ' ') {
+            list++;
+        }
+        list++;
+        n++;
+    }
+
+    if (*list != 0) {
+        // not end of list, print next word
+        while (*list > ' ') {
+            msp4th_putchar(*list++);
+        }
+    } else {
+        msp4th_putchar('?');
+    }
+
+    msp4th_putchar(' ');
+}
+
+
+/****************************************************************************
+ * Other helpers
+ ***************************************************************************/
 void execFunc(void) {
     int16_t opcode;
 
@@ -1034,7 +905,7 @@ void execFunc(void) {
 
     if (opcode >= BUILTIN_OPCODE_OFFSET) {
         // this is a built in opcode
-        execN(opcode - BUILTIN_OPCODE_OFFSET);
+        execVM(opcode - BUILTIN_OPCODE_OFFSET);
     } else if (opcode >= BUILTIN_INTERP_OFFSET) {
         // built in interp
         pushAddrStack(progCounter);
@@ -1046,491 +917,658 @@ void execFunc(void) {
 }
 
 
-void execN(int16_t opcode)
-{
-  int16_t i,j,k,m,n;
-  int32_t x;
-
-  switch(opcode){
-    case  0: // unused
-      break;
-
-    case  1: // bye
-      xit = 1;
-      break;
-
-    case  2: // +  ( a b -- a+b )
-      NOS += TOS;
-      popMathStack();
-      break;
-
-    case  3: // -  ( a b -- a-b )
-      NOS += -TOS;
-      popMathStack();
-      break;
-
-    case  4: // *  ( a b -- reshi reslo )
-#if defined(MSP430)
-      asm("dint");
-      MPYS = NOS;
-      OP2 = TOS;
-      NOS = RESHI;
-      TOS = RESLO;
-      asm("eint");
-#else
-      x = TOS * NOS;
-      NOS = (int16_t)((x >> 16) & 0xffff);
-      TOS = (int16_t)(x & 0xffff);
-#endif
-      break;
-
-    case  5: // /%  ( a b -- a/b a%b )
-#if defined(MSP430)
-      /* directly call divmodhi4, gcc calls it twice even though the fn returns
-       * both values in one call */
-      asm("mov 2(%[ms]), r12\n"
-          "mov 0(%[ms]), r10\n"
-          "call #__divmodhi4\n"
-          "mov r12, 2(%[mso])\n"
-          "mov r14, 0(%[mso])\n"
-          : [mso] "+r" (mathStackPtr) /* outputs */
-          : [ms] "r" (mathStackPtr) /* inputs */
-          : /* clobbers */ "r10","r11","r12","r13","r14"
-         );
-#else
-      i = NOS;
-      j = TOS;
-      NOS = i / j;
-      TOS = i % j;
-#endif
-      break;
-
-    case  6: // .  ( a -- )
-      printNumber(popMathStack());
-      break;
-
-    case  7: // dup  ( a -- a a )
-      pushMathStack(TOS);
-      break;
-
-    case  8: // drop  ( a -- )
-      i = popMathStack();
-      break;
-
-    case  9: // swap  ( a b -- b a )
-      i = TOS;
-      TOS = NOS;
-      NOS = i;
-      break;
-
-    case 10: // <  ( a b -- a<b )
-      i = popMathStack();
-      if(TOS < i){
-        TOS = 1;
-      } else {
-        TOS = 0;
-      }
-      break;      
-
-    case 11: // >  ( a b -- a>b )
-      i = popMathStack();
-      if(TOS > i){
-        TOS = 1;
-      } else {
-        TOS = 0;
-      }
-      break;      
-
-    case 12: // ==  ( a b -- a==b )
-      i = popMathStack();
-      if(i == TOS){
-        TOS = 1;
-      } else {
-        TOS = 0;
-      }
-      break;      
-
-    case 13: // hb.  ( a -- )
-      printHexByte(popMathStack());
-      msp4th_putchar(' ');
-      break;
-
-    case 14: // gw  ( -- ) \ get word from input
-      getWord();
-      break;
-
-    case 15: // dfn  ( -- ) \ create opcode and store word to cmdList
-      dfnFunc();
-      break;
-
-    case 16: // abs  ( a -- |a| ) \ -32768 is unchanged
-      if (TOS < 0) {
-          TOS = -TOS;
-      }
-      break;
-
-    case 17: // ,  ( opcode -- ) \ push opcode to prog space
-      prog[progIdx++] = popMathStack();
-      break;
-
-    case 18: // p@  ( opaddr -- opcode )
-      i = TOS;
-      TOS = prog[i];
-      break;
-
-    case 19: // p!  ( opcode opaddr -- )
-      i = popMathStack();
-      j = popMathStack();
-      prog[i] = j;
-      break;
-
-    case 20: // not  ( a -- !a ) \ logical not
-      if(TOS){
-        TOS = 0;
-      } else {
-        TOS = 1;
-      }
-      break;
-
-    case 21: // list  ( -- ) \ show defined words
-      listFunction();
-      break;
-
-    case 22: // if  ( flag -- )
-      ifFunc(0);
-      break;
-
-    case 23: // then      ( trapped in ':')
-      break;
-
-    case 24: // else      ( trapped in ':')
-      break;
-
-    case 25: // begin  ( -- ) ( -a- pcnt )
-      pushAddrStack(progCounter);
-      break;
-
-    case 26: // until  ( flag -- ) ( addr -a- )
-      i = popAddrStack();
-      j = popMathStack();
-      if(j == 0){
-        addrStackPtr--;  // number is still there ... just fix the pointer
-        progCounter = i;
-      }
-      break;    
-
-    case 27: // depth  ( -- n ) \ math stack depth
-      pushMathStack(mathStackStart - mathStackPtr);
-      break;
-      
-    case 28: // h.  ( a -- )
-      printHexWord(popMathStack());
-      msp4th_putchar(' ');
-      break;
-
-    case 29: // ] ( trapped in interp )
-      break;
-
-    case 30: // num  ( -- n flag ) \ is word in buffer a number?
-      numFunc();
-      break;
-
-    case 31: // push0  ( -- 0 )
-      pushMathStack(0);
-      break;
-
-    case 32: // goto   ( for internal use only )
-      ifFunc(1);
-      break;
-
-    case 33: // exec  ( opcode -- )
-      execFunc();
-      break;
-
-    case 34: // lu  ( -- opcode 1 | 0 )
-      luFunc();
-      break;
-
-    case 35: // pushn   ( internal use only )
-      pushnFunc();
-      break;
-
-    case 36: // over  ( a b -- a b a )
-      pushMathStack(NOS);
-      break;
-
-    case 37: // push1  ( -- 1 )
-      pushMathStack(1);
-      break;
-
-    case 38: // pwrd  ( -- ) \ print word buffer
-      msp4th_puts(wordBuffer);
-      break;
-
-    case 39: // emit  ( c -- )
-      msp4th_putchar(popMathStack());
-      break;
-
-    case 40: // ;  ( pcnt -a- )
-      i = progCounter;
-      progCounter = popAddrStack();
-      break;
-
-    case 41: // @  ( addr -- val ) \ read directly from memory address
-      i = TOS >> 1;
-      TOS = dirMemory[i];
-      break;
-      
-    case 42: // !  ( val addr -- ) \ write directly to memory address words only!
-      i = popMathStack();  //  address to write to
-      i = i >> 1;
-      j = popMathStack();  //  value to write
-      dirMemory[i] = j;
-      break;
-
-    case 43: // h@  ( -- prog ) \ end of program code space
-      pushMathStack(progIdx);
-      break;
-
-    //////// end of words used in progBi[] ///////////////////////////////////
-
-    case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
-      i = popMathStack();  // start of count
-      j = popMathStack();  // end count
-      k = progCounter;
-
-      pushAddrStack(j);  // limit on count
-      pushAddrStack(i);  // count  (I)
-      pushAddrStack(k);  // address to remember for looping
-      break;
-
-    case 45: // loop  ( -- ) ( limit cnt pcnt -a- | limit cnt+1 pcnt )
-      loopFunc(1);
-      break;
-
-    case 46: // +loop  ( n -- ) ( limit cnt pcnt -a- | limit cnt+n pcnt ) \ decrement loop if n<0
-      loopFunc(popMathStack());
-      break;
-
-    case 47: // i  ( -- cnt ) \ loop counter value
-      i = ANOS;
-      pushMathStack(i);
-      break;
-
-    case 48: // j  ( -- cnt ) \ next outer loop counter value
-      i = ASTACK(4);
-      pushMathStack(i);
-      break;
-
-    case 49: // k  ( -- cnt ) \ next next outer loop counter value
-      i = ASTACK(7);
-      pushMathStack(i);
-      break;
-
-    case 50: // ~  ( a -- ~a ) \ bitwise complement
-      TOS = ~TOS;
-      break;
-
-    case 51: // ^  ( a b -- a^b ) \ bitwise xor
-      NOS ^= TOS;
-      popMathStack();
-      break;
-
-    case 52: // &  ( a b -- a&b ) \ bitwise and
-      NOS &= TOS;
-      popMathStack();
-      break;
-
-    case 53: // |  ( a b -- a|b ) \bitwise or
-      NOS |= TOS;
-      popMathStack();
-      break;
-
-    case 54: // */  ( a b c -- (a*b)/c ) \ 32b intermediate
-#if defined(MSP430)
-      asm("dint");
-      MPYS = popMathStack();
-      OP2 = NOS;
-      x = (((int32_t)RESHI << 16) | RESLO);
-      asm("eint");
-      x = (x / TOS);
-      popMathStack();
-      TOS = (int16_t)(x & 0xffff);
-#else
-      i = popMathStack();
-      j = TOS;
-      k = NOS;
-      x = j * k;
-      x = x / i;
-      popMathStack();
-      TOS = (int16_t)(x & 0xffff);
-#endif
-      break;
-      
-    case 55: // key  ( -- c ) \ get a key from input .... (wait for it)
-      pushMathStack(msp4th_getchar());
-      break;
-
-    case 56: // cr  ( -- )
-      msp4th_putchar(0x0D);
-      msp4th_putchar(0x0A);
-      break;
-
-    case 57: // 2*  ( a -- a<<1 )
-      TOS <<= 1;
-      break;
-
-    case 58: // 2/  ( a -- a>>1 )
-      TOS >>= 1;
-      break;
-
-    case 59: // call0  ( &func -- *func() )
-      i = TOS;
-GCC_DIAG_OFF(int-to-pointer-cast);
-      TOS = (*(int16_t(*)(void)) i) ();
-GCC_DIAG_ON(int-to-pointer-cast);
-      break;
-
-    case 60: // call1  ( a &func -- *func(a) )
-      i = TOS;
-      j = NOS;
-GCC_DIAG_OFF(int-to-pointer-cast);
-      NOS = (*(int16_t(*)(int16_t)) i) (j);
-GCC_DIAG_ON(int-to-pointer-cast);
-      popMathStack();
-      break;
-
-    case 61: // call2  ( a b &func -- *func(a,b) )
-      i = TOS;
-      j = NOS;
-      k = STACK(2);
-GCC_DIAG_OFF(int-to-pointer-cast);
-      STACK(2) = (*(int16_t(*)(int16_t, int16_t)) i) (k, j);
-GCC_DIAG_ON(int-to-pointer-cast);
-      ndrop(2);
-      break;
-
-    case 62: // call3  ( a b c &func -- *func(a,b,c) )
-      i = TOS;
-      j = NOS;
-      k = STACK(2);
-      m = STACK(3);
-GCC_DIAG_OFF(int-to-pointer-cast);
-      STACK(3) = (*(int16_t(*)(int16_t, int16_t, int16_t)) i) (m, k, j);
-GCC_DIAG_ON(int-to-pointer-cast);
-      ndrop(3);
-      break;
-
-    case 63: // call4  ( a b c d &func -- *func(a,b,c,d) )
-      i = TOS;
-      j = NOS;
-      k = STACK(2);
-      m = STACK(3);
-      n = STACK(4);
-GCC_DIAG_OFF(int-to-pointer-cast);
-      STACK(4) = (*(int16_t(*)(int16_t, int16_t, int16_t, int16_t)) i) (n, m, k, j);
-GCC_DIAG_ON(int-to-pointer-cast);
-      ndrop(4);
-      break;
-
-    case 64: // ndrop  ( (x)*n n -- ) \ drop n math stack cells
-      ndrop(popMathStack());
-      break;
-
-    case 65: // swpb  ( n -- n ) \ byteswap TOS
-#if defined(MSP430)
-      asm("swpb %[s]\n": [s] "+r" (mathStackPtr) : : );
-#else
-      TOS = ((TOS >> 8) & 0x00ff) | ((TOS << 8) & 0xff00);
-#endif
-      break;
-
-    case 66: // +!  ( n addr -- ) \ *addr += n
-      i = popMathStack();
-      j = popMathStack();
-      dirMemory[i] += j;
-      break;
-
-    case 67: // roll  ( n -- ) \ nth stack removed and placed on top
-      rollFunc(popMathStack());
-      break;
-
-    case 68: // pick  ( n -- ) \ nth stack copied to top
-      i = popMathStack();
-      pushMathStack(STACK(i));
-      break;
-
-    case 69: // tuck  ( a b -- b a b ) \ insert copy TOS to after NOS
-      i = NOS;
-      pushMathStack(TOS);
-      STACK(2) = TOS;
-      NOS = i;
-      break;
-
-    case 70: // max  ( a b -- c ) \ c = a ? a>b : b
-      i = popMathStack();
-      if (i > TOS) {
-          TOS = i;
-      }
-      break;
-
-    case 71: // min  ( a b -- c ) \ c = a ? a<b : b
-      i = popMathStack();
-      if (i < TOS) {
-          TOS = i;
-      }
-      break;
-
-    case 72: // s.  ( -- ) \ print stack contents, TOS on right
-      { // addr is strictly local to this block
-          int16_t *addr;
-          addr = mathStackStart;
-          while (addr >= mathStackPtr) {
-              printNumber(*addr);
-              addr--;
-          }
-      }
-      break;
-
-    case 73: // sh.  ( -- ) \ print stack contents in hex, TOS on right
-      { // addr is strictly local to this block
-          int16_t *addr;
-          addr = mathStackStart;
-          while (addr >= mathStackPtr) {
-              printHexWord(*addr);
-              msp4th_putchar(' ');
-              addr--;
-          }
-      }
-      break;
-
-    case 74: // neg  ( a -- -a ) \ twos complement
-      TOS *= -1;
-      break;
-
-    case 75: // echo  ( bool -- ) \ ?echo prompts and terminal input?
-      echo = popMathStack();
-      break;
-
-    case 76: // init  ( &config -- ) \ clears buffers and calls msp4th_init
-      *lineBuffer = 0; // if location is same, the call is recursive otherwise
-GCC_DIAG_OFF(int-to-pointer-cast);
-      msp4th_init((struct msp4th_config *)popMathStack());
-GCC_DIAG_ON(int-to-pointer-cast);
-      break;
-
-    case 77: // o2w  ( opcode -- ) \ leaves name of opcode in wordBuffer
-      opcode2wordFunc();
-      break;
-
-    case 78: // o2p  ( opcode -- progIdx ) \ lookup opcode definition, 0 if builtin
-      opcode2progFunc();
-      break;
-
-    default:
-      break;
-  }
+void ifFunc(int16_t x){
+    // used as goto if x == 1
+
+    uint16_t addr;
+    uint16_t tmp;
+    int16_t i;
+
+    if(progCounter >= BUILTIN_INTERP_OFFSET){
+        tmp = progCounter - BUILTIN_INTERP_OFFSET;
+        addr = progBi[tmp];
+    } else {
+        addr = prog[progCounter];
+    }
+
+    progCounter++;
+
+    if (x == 1) {
+        // this is a goto
+        progCounter = addr;
+    } else {
+        // this is the "if" processing
+        i = popMathStack();
+        if(i == 0){
+            progCounter = addr;
+        }
+    }
 }
 
 
+void loopFunc(int16_t n)
+{
+#define j ATOS      // loop address
+#define k ANOS      // count
+#define m ASTACK(2) // limit
+
+    k += n;     // inc/dec the count
+
+    if (((n > 0) && (k < m)) || ((n < 0) && (k > m))) {
+        // loop
+        progCounter = j;
+    } else {
+        // done, cleanup
+        ndropAddr(3);
+    }
+#undef j
+#undef k
+#undef m
+}
+
+
+void opcode2progFunc(void)
+{
+    // given an opcode, get the start index of prog of it's definition
+
+    if (TOS >= BUILTIN_INTERP_OFFSET) {
+        // catches both OPCODE and INTERP_OFFSET
+        TOS = 0;
+    } else {
+        TOS = progOpcodes[TOS];
+    }
+}
+
+
+void pushnFunc(void)
+{
+    int16_t i;
+
+    if (progCounter >= BUILTIN_INTERP_OFFSET) {
+        i = progBi[progCounter - BUILTIN_INTERP_OFFSET];
+    } else {
+        i = prog[progCounter];
+    }
+
+    progCounter = progCounter + 1;
+    pushMathStack(i);
+}
+
+
+void rollFunc(int16_t n)
+{
+    int16_t *addr;
+    int16_t tmp;
+
+    tmp = STACK(n);
+    addr = (mathStackPtr + n);
+
+    while (addr > mathStackPtr) {
+        *addr = *(addr - 1);
+        addr--;
+    }
+
+    TOS = tmp;
+}
+
+
+/****************************************************************************
+ *
+ * VM opcode execution
+ *
+ ***************************************************************************/
+void execVM(int16_t opcode)
+{
+    int16_t i,j,k,m,n;
+    int32_t x;
+
+    switch(opcode){
+        case  0: // unused
+            break;
+
+        case  1: // bye
+            xit = 1;
+            break;
+
+        case  2: // +  ( a b -- a+b )
+            NOS += TOS;
+            popMathStack();
+            break;
+
+        case  3: // -  ( a b -- a-b )
+            NOS += -TOS;
+            popMathStack();
+            break;
+
+        case  4: // *  ( a b -- reshi reslo )
+#if defined(MSP430)
+            asm("dint");
+            MPYS = NOS;
+            OP2 = TOS;
+            NOS = RESHI;
+            TOS = RESLO;
+            asm("eint");
+#else
+            x = TOS * NOS;
+            NOS = (int16_t)((x >> 16) & 0xffff);
+            TOS = (int16_t)(x & 0xffff);
+#endif
+            break;
+
+        case  5: // /%  ( a b -- a/b a%b )
+#if defined(MSP430)
+            /* directly call divmodhi4, gcc calls it twice even though the fn returns
+             * both values in one call */
+            asm("mov 2(%[ms]), r12\n"
+                "mov 0(%[ms]), r10\n"
+                "call #__divmodhi4\n"
+                "mov r12, 2(%[mso])\n"
+                "mov r14, 0(%[mso])\n"
+                : [mso] "+r" (mathStackPtr) /* outputs */
+                : [ms] "r" (mathStackPtr) /* inputs */
+                : /* clobbers */ "r10","r11","r12","r13","r14"
+               );
+#else
+            i = NOS;
+            j = TOS;
+            NOS = i / j;
+            TOS = i % j;
+#endif
+            break;
+
+        case  6: // .  ( a -- )
+            printNumber(popMathStack());
+            break;
+
+        case  7: // dup  ( a -- a a )
+            pushMathStack(TOS);
+            break;
+
+        case  8: // drop  ( a -- )
+            i = popMathStack();
+            break;
+
+        case  9: // swap  ( a b -- b a )
+            i = TOS;
+            TOS = NOS;
+            NOS = i;
+            break;
+
+        case 10: // <  ( a b -- a<b )
+            i = popMathStack();
+            if (TOS < i) {
+                TOS = 1;
+            } else {
+                TOS = 0;
+            }
+            break;
+
+        case 11: // >  ( a b -- a>b )
+            i = popMathStack();
+            if (TOS > i) {
+                TOS = 1;
+            } else {
+                TOS = 0;
+            }
+            break;
+
+        case 12: // ==  ( a b -- a==b )
+            i = popMathStack();
+            if (i == TOS) {
+                TOS = 1;
+            } else {
+                TOS = 0;
+            }
+            break;
+
+        case 13: // hb.  ( a -- )
+            printHexByte(popMathStack());
+            msp4th_putchar(' ');
+            break;
+
+        case 14: // gw  ( -- ) \ get word from input
+            getWordFunc();
+            break;
+
+        case 15: // dfn  ( -- ) \ create opcode and store word to cmdList
+            dfnFunc();
+            break;
+
+        case 16: // abs  ( a -- |a| ) \ -32768 is unchanged
+            if (TOS < 0) {
+                TOS = -TOS;
+            }
+            break;
+
+        case 17: // ,  ( opcode -- ) \ push opcode to prog space
+            prog[progIdx++] = popMathStack();
+            break;
+
+        case 18: // p@  ( opaddr -- opcode )
+            i = TOS;
+            TOS = prog[i];
+            break;
+
+        case 19: // p!  ( opcode opaddr -- )
+            i = popMathStack();
+            j = popMathStack();
+            prog[i] = j;
+            break;
+
+        case 20: // not  ( a -- !a ) \ logical not
+            if (TOS) {
+                TOS = 0;
+            } else {
+                TOS = 1;
+            }
+            break;
+
+        case 21: // list  ( -- ) \ show defined words
+            listFunc();
+            break;
+
+        case 22: // if  ( flag -- )
+            ifFunc(0);
+            break;
+
+        case 23: // then      ( trapped in ':')
+            break;
+
+        case 24: // else      ( trapped in ':')
+            break;
+
+        case 25: // begin  ( -- ) ( -a- pcnt )
+            pushAddrStack(progCounter);
+            break;
+
+        case 26: // until  ( flag -- ) ( addr -a- )
+            i = popAddrStack();
+            j = popMathStack();
+
+            if (j == 0) {
+                addrStackPtr--;  // number is still there ... just fix the pointer
+                progCounter = i;
+            }
+            break;
+
+        case 27: // depth  ( -- n ) \ math stack depth
+            pushMathStack(mathStackStart - mathStackPtr);
+            break;
+
+        case 28: // h.  ( a -- )
+            printHexWord(popMathStack());
+            msp4th_putchar(' ');
+            break;
+
+        case 29: // ] ( trapped in interp )
+            break;
+
+        case 30: // num  ( -- n flag ) \ is word in buffer a number?
+            numFunc();
+            break;
+
+        case 31: // push0  ( -- 0 )
+            pushMathStack(0);
+            break;
+
+        case 32: // goto   ( for internal use only )
+            ifFunc(1);
+            break;
+
+        case 33: // exec  ( opcode -- )
+            execFunc();
+            break;
+
+        case 34: // lu  ( -- opcode 1 | 0 )
+            luFunc();
+            break;
+
+        case 35: // pushn   ( internal use only )
+            pushnFunc();
+            break;
+
+        case 36: // over  ( a b -- a b a )
+            pushMathStack(NOS);
+            break;
+
+        case 37: // push1  ( -- 1 )
+            pushMathStack(1);
+            break;
+
+        case 38: // pwrd  ( -- ) \ print word buffer
+            msp4th_puts(wordBuffer);
+            break;
+
+        case 39: // emit  ( c -- )
+            msp4th_putchar(popMathStack());
+            break;
+
+        case 40: // ;  ( pcnt -a- )
+            i = progCounter;
+            progCounter = popAddrStack();
+            break;
+
+        case 41: // @  ( addr -- val ) \ read directly from memory address
+            i = TOS >> 1;
+            TOS = dirMemory[i];
+            break;
+
+        case 42: // !  ( val addr -- ) \ write directly to memory address words only!
+            i = popMathStack();  //  address to write to
+            i = i >> 1;
+            j = popMathStack();  //  value to write
+            dirMemory[i] = j;
+            break;
+
+        case 43: // h@  ( -- prog ) \ end of program code space
+            pushMathStack(progIdx);
+            break;
+
+        //////// end of words used in progBi[] ///////////////////////////////////
+
+        case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
+            i = popMathStack();  // start of count
+            j = popMathStack();  // end count
+            k = progCounter;
+
+            pushAddrStack(j);  // limit on count
+            pushAddrStack(i);  // count  (I)
+            pushAddrStack(k);  // address to remember for looping
+            break;
+
+        case 45: // loop  ( -- ) ( limit cnt pcnt -a- | limit cnt+1 pcnt )
+            loopFunc(1);
+            break;
+
+        case 46: // +loop  ( n -- ) ( limit cnt pcnt -a- | limit cnt+n pcnt ) \ decrement loop if n<0
+            loopFunc(popMathStack());
+            break;
+
+        case 47: // i  ( -- cnt ) \ loop counter value
+            i = ANOS;
+            pushMathStack(i);
+            break;
+
+        case 48: // j  ( -- cnt ) \ next outer loop counter value
+            i = ASTACK(4);
+            pushMathStack(i);
+            break;
+
+        case 49: // k  ( -- cnt ) \ next next outer loop counter value
+            i = ASTACK(7);
+            pushMathStack(i);
+            break;
+
+        case 50: // ~  ( a -- ~a ) \ bitwise complement
+            TOS = ~TOS;
+            break;
+
+        case 51: // ^  ( a b -- a^b ) \ bitwise xor
+            NOS ^= TOS;
+            popMathStack();
+            break;
+
+        case 52: // &  ( a b -- a&b ) \ bitwise and
+            NOS &= TOS;
+            popMathStack();
+            break;
+
+        case 53: // |  ( a b -- a|b ) \bitwise or
+            NOS |= TOS;
+            popMathStack();
+            break;
+
+        case 54: // */  ( a b c -- (a*b)/c ) \ 32b intermediate
+#if defined(MSP430)
+            asm("dint");
+            MPYS = popMathStack();
+            OP2 = NOS;
+            x = (((int32_t)RESHI << 16) | RESLO);
+            asm("eint");
+            x = (x / TOS);
+            popMathStack();
+            TOS = (int16_t)(x & 0xffff);
+#else
+            i = popMathStack();
+            j = TOS;
+            k = NOS;
+            x = j * k;
+            x = x / i;
+            popMathStack();
+            TOS = (int16_t)(x & 0xffff);
+#endif
+            break;
+
+        case 55: // key  ( -- c ) \ get a key from input .... (wait for it)
+            pushMathStack(msp4th_getchar());
+            break;
+
+        case 56: // cr  ( -- )
+            msp4th_putchar(0x0D);
+            msp4th_putchar(0x0A);
+            break;
+
+        case 57: // 2*  ( a -- a<<1 )
+            TOS <<= 1;
+            break;
+
+        case 58: // 2/  ( a -- a>>1 )
+            TOS >>= 1;
+            break;
+
+        case 59: // call0  ( &func -- *func() )
+            i = TOS;
+GCC_DIAG_OFF(int-to-pointer-cast);
+            TOS = (*(int16_t(*)(void)) i) ();
+GCC_DIAG_ON(int-to-pointer-cast);
+            break;
+
+        case 60: // call1  ( a &func -- *func(a) )
+            i = TOS;
+            j = NOS;
+GCC_DIAG_OFF(int-to-pointer-cast);
+            NOS = (*(int16_t(*)(int16_t)) i) (j);
+GCC_DIAG_ON(int-to-pointer-cast);
+            popMathStack();
+            break;
+
+        case 61: // call2  ( a b &func -- *func(a,b) )
+            i = TOS;
+            j = NOS;
+            k = STACK(2);
+GCC_DIAG_OFF(int-to-pointer-cast);
+            STACK(2) = (*(int16_t(*)(int16_t, int16_t)) i) (k, j);
+GCC_DIAG_ON(int-to-pointer-cast);
+            ndrop(2);
+            break;
+
+        case 62: // call3  ( a b c &func -- *func(a,b,c) )
+            i = TOS;
+            j = NOS;
+            k = STACK(2);
+            m = STACK(3);
+GCC_DIAG_OFF(int-to-pointer-cast);
+            STACK(3) = (*(int16_t(*)(int16_t, int16_t, int16_t)) i) (m, k, j);
+GCC_DIAG_ON(int-to-pointer-cast);
+            ndrop(3);
+            break;
+
+        case 63: // call4  ( a b c d &func -- *func(a,b,c,d) )
+            i = TOS;
+            j = NOS;
+            k = STACK(2);
+            m = STACK(3);
+            n = STACK(4);
+GCC_DIAG_OFF(int-to-pointer-cast);
+            STACK(4) = (*(int16_t(*)(int16_t, int16_t, int16_t, int16_t)) i) (n, m, k, j);
+GCC_DIAG_ON(int-to-pointer-cast);
+            ndrop(4);
+            break;
+
+        case 64: // ndrop  ( (x)*n n -- ) \ drop n math stack cells
+            ndrop(popMathStack());
+            break;
+
+        case 65: // swpb  ( n -- n ) \ byteswap TOS
+#if defined(MSP430)
+            asm("swpb %[s]\n": [s] "+r" (mathStackPtr) : : );
+#else
+            TOS = ((TOS >> 8) & 0x00ff) | ((TOS << 8) & 0xff00);
+#endif
+            break;
+
+        case 66: // +!  ( n addr -- ) \ *addr += n
+            i = popMathStack();
+            j = popMathStack();
+            dirMemory[i] += j;
+            break;
+
+        case 67: // roll  ( n -- ) \ nth stack removed and placed on top
+            rollFunc(popMathStack());
+            break;
+
+        case 68: // pick  ( n -- ) \ nth stack copied to top
+            i = popMathStack();
+            pushMathStack(STACK(i));
+            break;
+
+        case 69: // tuck  ( a b -- b a b ) \ insert copy TOS to after NOS
+            i = NOS;
+            pushMathStack(TOS);
+            STACK(2) = TOS;
+            NOS = i;
+            break;
+
+        case 70: // max  ( a b -- c ) \ c = a ? a>b : b
+            i = popMathStack();
+            if (i > TOS) {
+                TOS = i;
+            }
+            break;
+
+        case 71: // min  ( a b -- c ) \ c = a ? a<b : b
+            i = popMathStack();
+            if (i < TOS) {
+                TOS = i;
+            }
+            break;
+
+        case 72: // s.  ( -- ) \ print stack contents, TOS on right
+            { // addr is strictly local to this block
+                    int16_t *addr;
+                    addr = mathStackStart;
+                    while (addr >= mathStackPtr) {
+                            printNumber(*addr);
+                            addr--;
+                    }
+            }
+            break;
+
+        case 73: // sh.  ( -- ) \ print stack contents in hex, TOS on right
+            { // addr is strictly local to this block
+                    int16_t *addr;
+                    addr = mathStackStart;
+                    while (addr >= mathStackPtr) {
+                            printHexWord(*addr);
+                            msp4th_putchar(' ');
+                            addr--;
+                    }
+            }
+            break;
+
+        case 74: // neg  ( a -- -a ) \ twos complement
+            TOS *= -1;
+            break;
+
+        case 75: // echo  ( bool -- ) \ ?echo prompts and terminal input?
+            echo = popMathStack();
+            break;
+
+        case 76: // init  ( &config -- ) \ clears buffers and calls msp4th_init
+            *lineBuffer = 0; // if location is same, the call is recursive otherwise
+GCC_DIAG_OFF(int-to-pointer-cast);
+            msp4th_init((struct msp4th_config *)popMathStack());
+GCC_DIAG_ON(int-to-pointer-cast);
+            break;
+
+        case 77: // o2w  ( opcode -- ) \ prints name of opcode
+            opcode2wordFunc();
+            break;
+
+        case 78: // o2p  ( opcode -- progIdx ) \ lookup opcode definition, 0 if builtin
+            opcode2progFunc();
+            break;
+
+        default:
+            break;
+    }
+}
+
+
+
+/****************************************************************************
+ *
+ * Public functions
+ *
+ ***************************************************************************/
+void msp4th_init(struct msp4th_config *c)
+{
+    /*
+     * Get addresses of user-configurable arrays from the pre-known vector
+     * table locations.
+     *
+     * Changing the values in the msp4th_* locations and calling
+     * msp4th_init() again restarts the interpreter with the new layout;
+     */
+    mathStackPtr = c->mathStackStart;
+    addrStackPtr = c->addrStackStart;
+    mathStackStart = c->mathStackStart;
+    addrStackStart = c->addrStackStart;
+    prog = c->prog;
+    progOpcodes = c->progOpcodes;
+    cmdList = c->cmdList;
+    lineBuffer = c->lineBuffer;
+    lineBufferLength = c->lineBufferLength;
+    wordBuffer = c->wordBuffer;
+    wordBufferLength = c->wordBufferLength;
+    msp4th_putchar = c->putchar;
+    msp4th_getchar = c->getchar;
+    msp4th_puts = c->puts;
+
+
+    xit = 0;
+    echo = 1;
+    progCounter = BUILTIN_INTERP_OFFSET;
+    progIdx = 1;			// this will be the first opcode
+    cmdListIdx = 0;
+
+    lineBufferIdx = 0;
+    msp4th_puts((uint8_t *)"msp4th!");
+}
+
+
+void msp4th_processLoop(void) // this processes the forth opcodes.
+{
+    uint16_t opcode;
+    uint16_t tmp;
+
+    while(xit == 0){
+        if(progCounter >= BUILTIN_INTERP_OFFSET){
+            tmp = progCounter - BUILTIN_INTERP_OFFSET;
+            opcode = progBi[tmp];
+        } else {
+            opcode = prog[progCounter];
+        }
+
+        progCounter = progCounter + 1;
+
+        if(opcode >= BUILTIN_OPCODE_OFFSET){
+            // this is a built in opcode
+            execVM(opcode - BUILTIN_OPCODE_OFFSET);
+        } else {
+            pushAddrStack(progCounter);
+            progCounter = progOpcodes[opcode];
+        }
+    } // while ()
+}
 
