@@ -355,6 +355,7 @@ const int16_t progBi[] = { // address actually start at 10000
  * Local function prototypes
  *
  ***************************************************************************/
+
 uint8_t getKeyB(void);
 void getLine(void);
 uint8_t nextPrintableChar(void);
@@ -363,9 +364,10 @@ void getWord(void);
 void listFunction(void);
 int16_t popMathStack(void);
 void pushMathStack(int16_t n);
+void ndrop(int16_t n);
 int16_t popAddrStack(void);
 void pushAddrStack(int16_t n);
-void ndropFunc(void);
+void ndropAddr(int16_t n);
 int16_t lookupToken(uint8_t *x, uint8_t *l);
 void luFunc(void);
 void opcode2wordFunc(void);
@@ -623,6 +625,16 @@ void pushMathStack(int16_t n)
 }
 
 
+void ndrop(int16_t n)
+{
+    mathStackPtr += n;
+
+    if (mathStackPtr > mathStackStart) {
+        mathStackPtr = mathStackStart;
+    }
+}
+
+
 #define ATOS (*addrStackPtr)
 #define ANOS (*(addrStackPtr + 1))
 #define ASTACK(n) (*(addrStackPtr + n))
@@ -663,12 +675,9 @@ void pushAddrStack(int16_t n)
 }
 
 
-void ndropFunc(void)
+void ndropAddr(int16_t n)
 {
-    int16_t n;
-
-    n = TOS + 1; // drop the *drop count* also
-    mathStackPtr += n;
+    addrStackPtr += n;
 }
 
 
@@ -899,7 +908,7 @@ void loopFunc(int16_t n)
         progCounter = j;
     } else {
         // done, cleanup
-        addrStackPtr += 3;
+        ndropAddr(3);
     }
 #undef j
 #undef k
@@ -1398,8 +1407,7 @@ GCC_DIAG_ON(int-to-pointer-cast);
 GCC_DIAG_OFF(int-to-pointer-cast);
       STACK(2) = (*(int16_t(*)(int16_t, int16_t)) i) (k, j);
 GCC_DIAG_ON(int-to-pointer-cast);
-      TOS = 1;
-      ndropFunc();
+      ndrop(2);
       break;
 
     case 62: // call3  ( a b c &func -- *func(a,b,c) )
@@ -1410,8 +1418,7 @@ GCC_DIAG_ON(int-to-pointer-cast);
 GCC_DIAG_OFF(int-to-pointer-cast);
       STACK(3) = (*(int16_t(*)(int16_t, int16_t, int16_t)) i) (m, k, j);
 GCC_DIAG_ON(int-to-pointer-cast);
-      TOS = 2;
-      ndropFunc();
+      ndrop(3);
       break;
 
     case 63: // call4  ( a b c d &func -- *func(a,b,c,d) )
@@ -1423,12 +1430,11 @@ GCC_DIAG_ON(int-to-pointer-cast);
 GCC_DIAG_OFF(int-to-pointer-cast);
       STACK(4) = (*(int16_t(*)(int16_t, int16_t, int16_t, int16_t)) i) (n, m, k, j);
 GCC_DIAG_ON(int-to-pointer-cast);
-      TOS = 3;
-      ndropFunc();
+      ndrop(4);
       break;
 
     case 64: // ndrop  ( (x)*n n -- ) \ drop n math stack cells
-      ndropFunc();
+      ndrop(popMathStack());
       break;
 
     case 65: // swpb  ( n -- n ) \ byteswap TOS
