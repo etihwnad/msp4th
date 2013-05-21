@@ -29,9 +29,10 @@ void uart_puts(uint8_t *s)
     uint16_t i = 0;
     uint8_t c = 1;
 
+    c = s[i++];
     while (c != 0) {
-        c = s[i++];
         uart_putchar(c);
+        c = s[i++];
     }
     uart_putchar('\r');
     uart_putchar('\n');
