@@ -8,6 +8,11 @@ import time
 import pexpect
 
 
+if len(sys.argv) > 1:
+    cmdfile = sys.argv[1]
+else:
+    cmdfile = 'tests.4th'
+
 atoi = pexpect.spawn('miniterm.py',
         ['--rts=0', '/dev/ttyUSB3', '4800'],
         logfile=open('ns430.log', 'w'),
@@ -29,7 +34,12 @@ def cleanup():
     pc.close(force=True)
 
 
-def print_side(a, b, compare=True):
+def print_side(a, b, linenum=None, compare=True):
+    if linenum is None:
+        fmt = '%i%-80s %s %-80s'
+    else:
+        fmt = '%03i: %-80s %s %-80s'
+
     alines = [x.rstrip() for x in a.split('\n')]
     blines = [x.rstrip() for x in b.split('\n')]
 
@@ -39,13 +49,18 @@ def print_side(a, b, compare=True):
     alines.extend([''] * max(blen - alen, 0))
     blines.extend([''] * max(alen - blen, 0))
 
+    results = []
     for (aline, bline) in zip(alines, blines):
         eq = '='
+        results.append(True)
         if compare and aline != bline:
             eq = '!'
+            results[-1] = False
 
-        s = '%-80s %s %-80s' % (aline, eq, bline)
+        s = fmt % (linenum, aline, eq, bline)
         print s
+
+    return all(results)
 
 def prompt(p):
     p.expect([r'\r\n>', pexpect.EOF])
@@ -63,7 +78,12 @@ try:
     # side-by-side output
     prompt(atoi)
     prompt(pc)
-    print_side(' '.join(atoi.args), ' '.join(pc.args), False)
+    print_side(' '.join(atoi.args),
+            ' '.join(pc.args),
+            linenum=0,
+            compare=False)
+    linenum = 1
+    results = []
     for line in open('tests.4th'):
         if line.startswith('bye'):
             break
@@ -71,12 +91,28 @@ try:
         s = line.rstrip()
         s += '\r'
 
+        # .after is the prompt before which send() acts on
+        a0 = atoi.after
+        a1 = pc.after
         for n in (pc, atoi):
             send(n, s)
             prompt(n)
 
-        print_side(atoi.before, pc.before)
+        same = print_side(str(a0.lstrip()) + atoi.before,
+                str(a1.lstrip()) + pc.before,
+                linenum)
 
+        if not same:
+            results.append(linenum)
+            print linenum#; break
+
+        linenum += 1
+
+    if results:
+        print 'Failing line numbers:'
+        print results
+    else:
+        print 'All lines match.'
 
 except pexpect.TIMEOUT:
     print '** TIMEOUT **'
