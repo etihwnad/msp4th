@@ -1348,11 +1348,11 @@ void execVM(int16_t opcode)
             msp4th_putchar(0x0A);
             break;
 
-        case 57: // 2*  ( a -- a<<1 )
+        case 57: // *2  ( a -- a<<1 )
             TOS <<= 1;
             break;
 
-        case 58: // 2/  ( a -- a>>1 )
+        case 58: // /2  ( a -- a>>1 )
             TOS >>= 1;
             break;
 
