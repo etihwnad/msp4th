@@ -1320,6 +1320,7 @@ void execVM(int16_t opcode)
 
         case 54: // */  ( a b c -- (a*b)/c ) \ 32b intermediate
 #if defined(MSP430)
+            // TODO FIXME broken order of operations
             asm("dint");
             MPYS = popMathStack();
             OP2 = NOS;
