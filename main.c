@@ -89,7 +89,6 @@ static void __inline__ eint(void){
 
 static __inline__ void init_uart(void)
 {
-    int16_t tmp;
     // chip setup for UART0 use
     PAPER = 0x0030;
     PAOUT = 0x0000;
@@ -99,7 +98,9 @@ static __inline__ void init_uart(void)
     UART0_CR = UARTEn;
 
     // a read clears the register -- ready for TX/RX
-    tmp = UART0_SR;
+    // NOTE: make sure the ASM actually reads this register
+    //       and isn't "optimized" out.  So far, no problems...
+    UART0_SR;
 }
 
 
