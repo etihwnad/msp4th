@@ -1056,24 +1056,10 @@ void execVM(int16_t opcode)
             break;
 
         case  5: // /%  ( a b -- a/b a%b )
-#if defined(MSP430)
-            /* directly call divmodhi4, gcc calls it twice even though the fn returns
-             * both values in one call */
-            asm("mov 2(%[ms]), r12\n"
-                "mov 0(%[ms]), r10\n"
-                "call #__divmodhi4\n"
-                "mov r12, 2(%[mso])\n"
-                "mov r14, 0(%[mso])\n"
-                : [mso] "+r" (mathStackPtr) /* outputs */
-                : [ms] "r" (mathStackPtr) /* inputs */
-                : /* clobbers */ "r10","r11","r12","r13","r14"
-               );
-#else
             i = NOS;
             j = TOS;
             NOS = i / j;
             TOS = i % j;
-#endif
             break;
 
         case  6: // .  ( a -- )
