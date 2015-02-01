@@ -134,7 +134,7 @@ bootrom.rcf: $(SOURCES) flashboot.s
 	../ihex2rcf.py --width=16 --start=0x3000 --length=0x1000 --default=0x0000 main.hex > $@
 
 _pc4th: test4th.c msp4th.c msp4th.h
-	gcc -Wall -o _pc4th test4th.c msp4th.c
+	gcc -g -Wall -o _pc4th test4th.c msp4th.c
 
 .PHONY:	flash
 flash: $(TARGET).hex
