@@ -1502,11 +1502,15 @@ GCC_DIAG_ON(int-to-pointer-cast);
 void msp4th_init(struct msp4th_config *c)
 {
     /*
-     * Get addresses of user-configurable arrays from the pre-known vector
-     * table locations.
+     * Startup the interpreter with a given configuration.  Struct describes
+     * the locations of the stacks, user program code and names, input
+     * buffers, and the terminal input/output functions.  See main() for
+     * an example of usage.
      *
-     * Changing the values in the msp4th_* locations and calling
-     * msp4th_init() again restarts the interpreter with the new layout;
+     * Changing the struct and calling msp4th_init() again restarts the
+     * interpreter with the new layout.  This allows expanding the RAM
+     * available to the interpreter if necessary for larger programs, or even
+     * injection of pre-compiled user code.
      */
     mathStackPtr = c->mathStackStart;
     addrStackPtr = c->addrStackStart;
