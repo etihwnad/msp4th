@@ -206,10 +206,9 @@ test-pwrd bar
 
 \    case 41: // @  ( addr -- val ) \ read directly from memory address
 \    case 42: // !  ( val addr -- ) \ write directly to memory address words only!
-\ NOTE: Not working on PC version, fake dirMemory array needs debugging.
-\ 42 0xff00 !
-\ 0xff00 @
-\ 42 cmp
+42 0xff00 !
+0xff00 @
+42 cmp
 
 \    case 43: // h@  ( -- progIdx ) \ get end of program code space
 \ no test

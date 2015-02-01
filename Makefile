@@ -70,7 +70,7 @@ OBJECTS = $(SOURCES:.c=.o)
 ASSEMBLYS = $(SOURCES:.c=.lst)
 
 #all: $(TARGET).elf $(TARGET).hex $(TARGET).txt 
-all: $(TARGET).elf $(TARGET).hex $(TARGET).xout $(ASSEMBLYS)
+all: $(TARGET).elf $(TARGET).hex $(TARGET).xout $(ASSEMBLYS) _pc4th
 
 #we .include this, so it doesn't make it to the auto-generated dependencies
 main.o: flashboot.s

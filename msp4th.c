@@ -1247,14 +1247,14 @@ void execVM(int16_t opcode)
 
         case 41: // @  ( addr -- val ) \ read directly from memory address
             i = TOS >> 1;
-            TOS = dirMemory[i];
+            TOS = dirMemory[(uint16_t)i];
             break;
 
         case 42: // !  ( val addr -- ) \ write directly to memory address words only!
             i = popMathStack();  //  address to write to
             i = i >> 1;
             j = popMathStack();  //  value to write
-            dirMemory[i] = j;
+            dirMemory[(uint16_t)i] = j;
             break;
 
         case 43: // h@  ( -- prog ) \ get end of program code space
@@ -1408,7 +1408,7 @@ GCC_DIAG_ON(int-to-pointer-cast);
         case 66: // +!  ( n addr -- ) \ *addr += n
             i = popMathStack();
             j = popMathStack();
-            dirMemory[i] += j;
+            dirMemory[(uint16_t)i] += j;
             break;
 
         case 67: // roll  ( n -- ) \ nth stack removed and placed on top
