@@ -1,16 +1,21 @@
 \ vim: ft=forth
 : ..
     dup . ;
+
 : fail ( -- )
     0x46 emit 0x41 emit 0x49 emit 0x4c emit cr ;
+
 : cmp ( a b -- )
     == not if fail s. then ;
+
 : scmp ( x*2n n -- ) \ verify stack contents match
     0 swap do
     i roll cmp
     -1 +loop ;
 5 6 7 8 5 6 7 8 4 scmp
 
+\    case  1: // bye
+\ exit interpreter, not testable
 
 \    case  2: // +  ( a b -- a+b )
 32767 1 +
@@ -80,6 +85,7 @@ depth 0 cmp
 test-gw theword
 
 \    case 15: // dfn  ( -- ) \ create opcode and store word to cmdList
+\ TODO
 ?
 
 \    case 16: // abs  ( a -- |a| ) \ -32768 is unchanged
@@ -117,6 +123,8 @@ h@ p@
 list
 
 \    case 22: // if  ( flag -- )
+\    case 23: // then      ( trapped in ':')
+\    case 24: // else      ( trapped in ':')
 : if-not ( flag -- !flag )
     if push0 else push 1 then ;
 1 if-not
@@ -146,6 +154,9 @@ depth ndrop
 \    case 28: // h.  ( a -- )
 0xcafe 0xbeef h. h.
 
+\    case 29: // ] ( trapped in interp )
+\ no test
+
 \    case 30: // num  ( -- n flag ) \ is word in buffer a number?
 : test-num
     gw num ;
@@ -154,6 +165,9 @@ test-num 235
 
 \    case 31: // push0  ( -- 0 )
 push0 0 cmp
+
+\    case 32: // goto   ( for internal use only )
+\ no test
 
 \    case 33: // exec  ( opcode -- )
 20043 exec
@@ -168,6 +182,9 @@ test-lu foo
 
 test-lu lu
 20034 1 2 scmp
+
+\    case 35: // pushn   ( internal use only )
+\ no test
 
 \    case 36: // over  ( a b -- a b a )
 1 2 over
@@ -184,6 +201,9 @@ test-pwrd bar
 \    case 39: // emit  ( c -- )
 0x5b emit 0x60 emit 0x73 emit 0x75 emit 0x70 emit 0x5d emit cr
 
+\    case 40: // ;  ( pcnt -a- ) \ return from inner word
+\ no test
+
 \    case 41: // @  ( addr -- val ) \ read directly from memory address
 \    case 42: // !  ( val addr -- ) \ write directly to memory address words only!
 \ NOTE: Not working on PC version, fake dirMemory array needs debugging.
@@ -191,7 +211,9 @@ test-pwrd bar
 \ 0xff00 @
 \ 42 cmp
 
-\    case 43: // h@  ( -- prog ) \ end of program code space
+\    case 43: // h@  ( -- progIdx ) \ get end of program code space
+\ no test
+
 \    case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
 \    case 45: // loop  ( -- ) ( limit cnt pcnt -a- | limit cnt+1 pcnt )
 \    case 46: // +loop  ( n -- ) ( limit cnt pcnt -a- | limit cnt+n pcnt ) \ decrement loop if n<0
