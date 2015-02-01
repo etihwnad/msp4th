@@ -13,11 +13,12 @@
  *
  *  * Used in Dan's "atoi" chip loaded from flash into RAM.
  *  * Fabbed in ROM as part of the Gharzai/Schmitz "piranha" imager chip.
+ *  * Fabbed in ROM as part of the Schmitz/Gharzai "cheetah" chip.
  *
  *  If cpp symbol "MSP430" is not defined, it compiles to a version for testing
  *  on PC as a console program via the setup and main() in "test430.c".
  *
- * TODO:
+ * TODO ideas:
  *  - use enum/symbols for VM opcodes (?builtins tagged as negative numbers?)
  *
  */
@@ -423,6 +424,12 @@ static void execVM(int16_t opcode);
 void pushMathStack(int16_t n)
 {
 #if defined(MSP430)
+    /* mspgcc doesn't recognize the decrement can be done directly on the
+     * register permanently holding *mathStackPtr and issues an extra
+     * "mov r6, r14" to the operate on the default gcc temp register r14.
+     * Stack operations should be as tight as absolutely possible.
+     * The same happens for {push,pop}AddrStack.
+     * */
     asm("decd %[ms]\n"
         "mov %[n],  @%[mso]\n"
         : /* outputs */ [mso] "+r" (mathStackPtr)
@@ -442,7 +449,11 @@ int16_t popMathStack(void)
 
     i = *mathStackPtr;
 
-    // prevent stack under-flow
+    /* prevent stack under-flow
+     * *** this is the ONLY stack checking in msp4th and is only here
+     * to avoid crashing things when a human pops/prints too much.  Words
+     * are expected to properly handle the stack.
+     * */
     if (mathStackPtr < mathStackStart) {
         mathStackPtr++;
     }
@@ -1130,7 +1141,7 @@ void execVM(int16_t opcode)
             prog[progIdx++] = popMathStack();
             break;
 
-        case 18: // p@  ( opaddr -- opcode )
+        case 18: // p@  ( opaddr -- opcode ) \ retrieve opcode from prog address
             i = TOS;
             TOS = prog[i];
             break;
@@ -1209,7 +1220,7 @@ void execVM(int16_t opcode)
             luFunc();
             break;
 
-        case 35: // pushn   ( internal use only )
+        case 35: // pushn   ( -- a ) \ put next prog code to math stack
             pushnFunc();
             break;
 
@@ -1229,7 +1240,7 @@ void execVM(int16_t opcode)
             msp4th_putchar(popMathStack());
             break;
 
-        case 40: // ;  ( pcnt -a- )
+        case 40: // ;  ( pcnt -a- ) \ return from inner word
             i = progCounter;
             progCounter = popAddrStack();
             break;
@@ -1246,11 +1257,13 @@ void execVM(int16_t opcode)
             dirMemory[i] = j;
             break;
 
-        case 43: // h@  ( -- prog ) \ end of program code space
+        case 43: // h@  ( -- prog ) \ get end of program code space
             pushMathStack(progIdx);
             break;
 
+        //////////////////////////////////////////////////////////////////////////
         //////// end of words used in progBi[] ///////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////
 
         case 44: // do  ( limit cnt -- ) ( -a- limit cnt pcnt )
             i = popMathStack();  // start of count
