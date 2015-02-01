@@ -1305,17 +1305,6 @@ void execVM(int16_t opcode)
             break;
 
         case 54: // */  ( a b c -- (a*b)/c ) \ 32b intermediate
-#if defined(MSP430)
-            // TODO FIXME broken order of operations
-            asm("dint");
-            MPYS = popMathStack();
-            OP2 = NOS;
-            x = (((int32_t)RESHI << 16) | RESLO);
-            asm("eint");
-            x = (x / TOS);
-            popMathStack();
-            TOS = (int16_t)(x & 0xffff);
-#else
             i = popMathStack();
             j = TOS;
             k = NOS;
@@ -1323,7 +1312,6 @@ void execVM(int16_t opcode)
             x = x / i;
             popMathStack();
             TOS = (int16_t)(x & 0xffff);
-#endif
             break;
 
         case 55: // key  ( -- c ) \ get a key from input .... (wait for it)
