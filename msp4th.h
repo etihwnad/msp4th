@@ -22,7 +22,7 @@ struct msp4th_config {
 };
 
 void msp4th_init(struct msp4th_config *);
-void msp4th_processLoop(void);
+int16_t msp4th_processLoop(void);
 
 /* Suppress specific warnings (callX words use function pointers)
  *

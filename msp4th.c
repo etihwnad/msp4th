@@ -1539,7 +1539,7 @@ void msp4th_init(struct msp4th_config *c)
 }
 
 
-void msp4th_processLoop(void) // this processes the forth opcodes.
+int16_t msp4th_processLoop(void) // this processes the forth opcodes.
 {
     uint16_t opcode;
     uint16_t tmp;
@@ -1562,5 +1562,6 @@ void msp4th_processLoop(void) // this processes the forth opcodes.
             progCounter = progOpcodes[opcode];
         }
     } // while ()
+    return(TOS);
 }
 

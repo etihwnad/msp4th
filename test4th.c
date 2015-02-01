@@ -100,13 +100,19 @@ void config_msp4th(void)
 }
 
 
+uint8_t chip_id[] = "msp4th, PC edition\r\n";
 
 int main(void)
 {
+    int16_t x;
     config_msp4th();
 
     msp4th_init(&config);
-    msp4th_processLoop();
+    x = msp4th_processLoop();
+
+    if (x == 42) {
+        my_puts(chip_id);
+    }
 
     return 0;
 }

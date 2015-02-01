@@ -44,6 +44,22 @@
 #define WORD_BUFFER_SIZE 32
 
 
+const uint8_t chip_id[] = {
+    "AMSP1 -> piranha -> cheetah\r\n"
+    "{\r\n"
+    " Balkir\r\n"
+    " Gharzai\r\n"
+    " Hoffman\r\n"
+    " Schemm\r\n"
+    " Schmitz\r\n"
+    " White\r\n"
+    "}\r\n"
+    "2015 UNL\r\n"
+    "cheetah\r\n"
+};
+
+
+
 
 /*
  * Re-define the startup/reset behavior to this.  GCC normally uses this
@@ -200,11 +216,17 @@ int main(void){
      *  - any EOT character in the input ('^D', control-D, 0x04)
      *  - any 0xff character in the input
      */
+    int16_t x;
+
     while (1) {
         setup_default_msp4th();
 
         msp4th_init(&default_config);
-        msp4th_processLoop();
+        x = msp4th_processLoop();
+
+        if (x == 42) {
+            uart_puts((uint8_t *)chip_id);
+        }
     }
 
     return 0;
