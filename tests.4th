@@ -1,17 +1,18 @@
 \ vim: ft=forth
-: ..
+: .. ( -- ) \ print TOS without consuming
     dup . ;
 
-: fail ( -- )
+: fail ( -- ) \ print "FAIL"
     0x46 emit 0x41 emit 0x49 emit 0x4c emit cr ;
 
 : cmp ( a b -- )
     == not if fail s. then ;
 
-: scmp ( x*2n n -- ) \ verify stack contents match
+: scmp ( x*2n n -- ) \ verify n stack entries match, or are repeated
     0 swap do
-    i roll cmp
-    -1 +loop ;
+        i roll cmp
+        -1
+    +loop ;
 5 6 7 8 5 6 7 8 4 scmp
 
 \    case  1: // bye
