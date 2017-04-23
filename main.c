@@ -178,11 +178,11 @@ int main(void){
     /*
      * SPECIAL BOOTLOADER CALLING
      *
-     * We *do not* want to 'call' the initial bootloader.  Such a call instruction
-     * attempts to use the stack, which is in RAM -- whose health is unknown.  The
-     * functionality must use ROM code and registers only.  * Declaring as an
-     * inline function and .include'ing the ASM code is a hop and skip to ensure
-     * this happens.
+     * We *do not* want to 'call' the initial bootloader.  Such a call
+     * instruction attempts to use the stack, which is in RAM -- whose health
+     * is unknown.  The functionality must use ROM code and registers only.  *
+     * Declaring as an inline function and .include'ing the ASM code is a hop
+     * and skip to ensure this happens.
      *
      * As a consequence, the ASM file must use local labels only -- of the form
      *  N:
