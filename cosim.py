@@ -11,7 +11,7 @@ import pexpect
 if len(sys.argv) > 1:
     cmdfile = sys.argv[1]
 else:
-    cmdfile = 'tests.4th'
+    cmdfile = '4th/tests.4th'
 
 atoi = pexpect.spawn('miniterm.py',
         ['--rts=0', '/dev/ttyUSB3', '4800'],
