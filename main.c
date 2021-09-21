@@ -4,7 +4,6 @@
 
 #include "ns430-atoi.h"
 #include "ns430-uart.h"
-#include "ns430-spi.h"
 
 #include "msp4th.h"
 

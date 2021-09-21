@@ -1,4 +1,8 @@
-\ vim: ft=forth
+\ 
+\ Set of words to disassemble compiled words back to
+\ equivalent text.
+
+
 : ' ( -- opcode) gw lu not if push0 then ;  \ gets next word, leaves its opcode if found, else 0
 : colon 0x3a emit ;
 : semicolon 0x3b emit ;
@@ -40,9 +44,13 @@
         p@ dup .
         o2w cr
     loop ;
+
+\ Examples of use
 prog-space
 ' dis o2p
 ' dis dis
 ' print-opcode dis
 20032 dis
 bye
+
+\ vim: ft=forth

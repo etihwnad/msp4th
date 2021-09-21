@@ -1,4 +1,6 @@
-\ vim: ft=forth
+\ Tests of stack results against known-correct values
+
+
 : .. ( -- ) \ print TOS without consuming
     dup . ;
 
@@ -251,3 +253,5 @@ test-pwrd bar
 \    case 78: // o2p  ( opcode -- progIdx ) \ lookup opcode definition, 0 if builtin
 
 bye
+
+\ vim: ft=forth
