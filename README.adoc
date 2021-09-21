@@ -1,0 +1,9 @@
+# msp4th - a forth-like interpreter for bootstrapping hardware
+
+
+Previous versions were fabricated in 4 KiB of mask ROM in a few generations of ASICs where it was handy to interactively poke at configuration registers during early chip bring-up.
+Those chips had a custom CPU compatible with the MSP430's CPUX instruction set architecture so we could avoid writing an assembler + compiler.
+
+Current version is a WIP to port to the TI MSP430 platform intended to run on a LaunchPad.
+
+
