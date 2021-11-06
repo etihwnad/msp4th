@@ -1,24 +1,16 @@
 
 
-#include "ns430.h"
-
-#include "ns430-atoi.h"
-#include "ns430-uart.h"
+#include <msp430.h>
+#include <stdint.h>
 
 #include "msp4th.h"
 
 
 
-/*
- * Assumptions about clocking.  The affected register is the UART0_BCR.  See
- * "ns430-uart.h" or the ns430 documentation for the relationship between BCR,
- * the cpu clock rate, and the effective UART baud rate.
- *
- * A 12 MHz clock and a desired baudrate of 4800 yields a UARTx_CR value of 155
- * from the UART_BCR() macro.
- */
-#define DEVBOARD_CLOCK 12000000L
-#define BAUDRATE 4800L
+// default on LaunchPad
+#define SMCLK_FREQ 1000000L
+#define USCI_CLOCK_FREQ SMCLK_FREQ
+#define BAUDRATE 115200L
 
 
 /*
@@ -44,100 +36,146 @@
 
 
 const uint8_t chip_id[] = {
-    "AMSP1 -> piranha -> cheetah\r\n"
-    "{\r\n"
-    " Balkir\r\n"
-    " Gharzai\r\n"
-    " Hoffman\r\n"
-    " Schemm\r\n"
-    " Schmitz\r\n"
-    " White\r\n"
-    "}\r\n"
-    "2015 UNL\r\n"
-    "cheetah\r\n"
+    "SHALL WE PLAY AGAIN?\r\n"
 };
 
 
-
-
-/*
- * Re-define the startup/reset behavior to this.  GCC normally uses this
- * opportunity to initialize all variables (bss) to zero.
- *
- * By doing this, we take all initialization into our own hands.
- *
- *      YE BE WARNED
- */
-void __attribute__ ((naked)) _reset_vector__(void) {
-  __asm__ __volatile__("mov #0xff00,r1"::);
-  __asm__ __volatile__("br #main"::);
-}
-
-
-/*
- * Burn power for no reason..
- *
- * TODO: document # of MCLK's per loop + overhead
- */
-static void __inline__ delay(register unsigned int n){
-  __asm__ __volatile__ (
-      "1: \n"
-      " dec     %[n] \n"
-      " jne     1b \n"
-      : [n] "+r"(n));
-}
-
-
-/*
- * Dis/Enable interrupts from C
- */
-static void __inline__ dint(void) {
-  __asm__ __volatile__ ( "dint" :: );
-}
-
-static void __inline__ eint(void){
-  __asm__ __volatile__ ( "eint" :: );
-}
-
-
-
-
-static __inline__ void init_uart(void)
+void led1(x)
 {
-    // chip setup for UART0 use
-    PAPER = 0x0030;
-    PAOUT = 0x0000;
-    PAOEN = 0x0010;  // set data direction registers
+    const uint8_t BIT = (1 << 0);
 
-    UART0_BCR = UART_BCR(DEVBOARD_CLOCK, BAUDRATE);
-    UART0_CR = UARTEn;
+    if (x !=0) {
+        P1OUT |= BIT;
+    }
+    else {
+        P1OUT &= ~BIT;
+    }
+}
 
-    // a read clears the register -- ready for TX/RX
-    // NOTE: make sure the ASM actually reads this register
-    //       and isn't "optimized" out.  So far, no problems...
-    UART0_SR;
+
+void led2(x)
+{
+    const uint8_t BIT = (1 << 7);
+
+    if (x !=0) {
+        P9OUT |= BIT;
+    }
+    else {
+        P9OUT &= ~BIT;
+    }
 }
 
 
 
 
-/*
- * The ".noinit" section should be placed so these vectors are the last part
- * of allocated RAM.  All space beyond, up until 0xff00, is empty or unused.
- * This keeps all the msp4th global variables in RAM in one continuous block.
- */
-int16_t __attribute__ ((section(".noinit"))) mathStackArray[MATH_STACK_SIZE];
-int16_t __attribute__ ((section(".noinit"))) addrStackArray[ADDR_STACK_SIZE];
-int16_t __attribute__ ((section(".noinit"))) progArray[USER_PROG_SIZE];
-int16_t __attribute__ ((section(".noinit"))) progOpcodesArray[USER_OPCODE_MAPPING_SIZE];
-uint8_t __attribute__ ((section(".noinit"))) cmdListArray[USER_CMD_LIST_SIZE];
-uint8_t __attribute__ ((section(".noinit"))) lineBufferArray[LINE_BUFFER_SIZE];
-uint8_t __attribute__ ((section(".noinit"))) wordBufferArray[WORD_BUFFER_SIZE];
 
-struct msp4th_config __attribute__ ((section(".noinit"))) default_config;
+void board_setup(void)
+{
+    // Configure GPIO
+
+    // LEDs are outputs
+    P1DIR |= (0x01 << 0);  // LED1
+    P9DIR |= (0x01 << 7);  // LED2
+
+    // P1.1 is SW1 input
+    P1REN |= (0x01 << 1);
+    P1OUT |= (0x01 << 1);
+
+    // P1.2 is SW2 input
+    P1REN |= (0x01 << 2);
+    P1OUT |= (0x01 << 2);
 
 
-static __inline__ void setup_default_msp4th(void)
+    // Done with all IO configuration.
+    // as Captain Picard says:
+    // ... "Make it so"
+
+    // Disable the GPIO power-on default high-impedance mode to activate
+    // previously configured port settings
+    PM5CTL0 &= ~LOCKLPM5;
+
+
+    /* Clock setup
+     *
+     * none, we are using the LaunchPad default setup, which is
+     *    MCLK = 1 MHz
+     *    SMCLK = 1 MHz
+     */
+}
+
+
+
+void uart_setup(void)
+{
+    /*
+     * MSP-EXPFR6989 LaunchPad
+     * Application "backchannel" UART uses
+     *  USCI_A1 connected via target pins
+     *      P3.4_TXD
+     *      P3.5_RXD
+     */
+
+
+    // Configure USCI_A1 for UART mode
+    //  FUG section 30.3.1 recommended order
+    // 1. Reset
+    UCA1CTLW0 = UCSWRST;
+
+    // 2. Init registers
+    UCA1CTL1 |= UCSSEL__SMCLK;  // CLK = SMCLK
+
+    // Baud rate setup
+    // FUG section 30.3.10
+    // must guard this section since it requires human action when changing
+    // baud rate and/or module clock
+#if (BAUDRATE == 115200L) && (USCI_CLOCK_FREQ == 1000000L)
+
+    //  step 1.  1000000/115200 = 8.68
+    //  step 2.  (skip step 3)
+    UCA1BRW = 8;
+
+    //  step 4.  1000000/115200 - INT(1000000/115200)=0.68
+    // --> table lookup UCBRSx value = 0xD6
+    UCA1MCTLW = 0xD600;
+    // 2.end
+#else
+    #error Unknown BAUDRATE / USCI_CLOCK_FREQ combination
+#endif
+
+    // 3. Config ports
+    //  MSP430FR698x datasheet slas789d
+    //  Table 6-25, page 103
+    // setup P3.4_TXD
+    P3SEL0 &= ~BIT4;
+    P3SEL1 |= BIT4;
+
+    // setup P3.5_RXD
+    P3SEL0 &= ~BIT4;
+    P3SEL1 |= BIT4;
+
+    // 4. Clear WCSWRST
+    UCA1CTL1 &= ~UCSWRST;
+
+    // 5. Enable interrupts
+    UCA1IE |= UCRXIE;           // Enable USCI_A0 RX interrupt
+}
+
+
+
+// allocate space for interpreter variables
+int16_t mathStackArray[MATH_STACK_SIZE];
+int16_t addrStackArray[ADDR_STACK_SIZE];
+int16_t progArray[USER_PROG_SIZE];
+int16_t progOpcodesArray[USER_OPCODE_MAPPING_SIZE];
+uint8_t cmdListArray[USER_CMD_LIST_SIZE];
+uint8_t lineBufferArray[LINE_BUFFER_SIZE];
+uint8_t wordBufferArray[WORD_BUFFER_SIZE];
+
+struct msp4th_config default_config;
+
+
+
+static void setup_default_msp4th(void)
 {
     default_config.mathStackStart = &mathStackArray[MATH_STACK_SIZE - 1];
     default_config.addrStackStart = &addrStackArray[ADDR_STACK_SIZE - 1];
@@ -174,35 +212,13 @@ static __inline__ void setup_default_msp4th(void)
 
 
 int main(void){
-    /*
-     * SPECIAL BOOTLOADER CALLING
-     *
-     * We *do not* want to 'call' the initial bootloader.  Such a call
-     * instruction attempts to use the stack, which is in RAM -- whose health
-     * is unknown.  The functionality must use ROM code and registers only.  *
-     * Declaring as an inline function and .include'ing the ASM code is a hop
-     * and skip to ensure this happens.
-     *
-     * As a consequence, the ASM file must use local labels only -- of the form
-     *  N:
-     *      mov foo, bar
-     *
-     *  where N is an integer, referenced as
-     *
-     *      jmp Nb
-     *
-     *  where the label is searched for forwards or backwards according to the
-     *  suffix Nf or Nb.
-     */
-#ifdef BOOTROM
-    // set a flag to generate the code with the proper constants
-    // otherwise use the constants setup for testing
-    asm(".set BOOTROM, 1");
-#endif
-    asm(".include \"flashboot.s\"");
 
+    // Stop WDT
+    WDTCTL = WDTPW | WDTHOLD;
 
-    init_uart();
+    board_setup();
+    uart_setup();
+
 
     /*
      * Startup and run msp4th interp.
@@ -215,20 +231,19 @@ int main(void){
      *  - any EOT character in the input ('^D', control-D, 0x04)
      *  - any 0xff character in the input
      */
-    int16_t x;
+    int16_t ret;
 
     while (1) {
         setup_default_msp4th();
 
         msp4th_init(&default_config);
-        x = msp4th_processLoop();
+        ret = msp4th_processLoop();
 
-        if (x == 42) {
+        if (ret == 42) {
             uart_puts((uint8_t *)chip_id);
         }
     }
 
     return 0;
 }
-
 
